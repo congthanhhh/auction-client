@@ -1,4 +1,4 @@
-import { Search, ShoppingCart, User } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 const Header = () => {
   return (
@@ -14,40 +14,44 @@ const Header = () => {
             
             {/* Category Dropdown */}
             <div className="flex items-center">
-              <select className="bg-white text-black px-3 py-1 rounded-md text-sm border">
+              <select className="bg-white text-black px-3 py-2 rounded text-sm border-none focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option>Danh mục</option>
-                <option>Điện tử</option>
-                <option>Thời trang</option>
-                <option>Gia dụng</option>
+                <option>Điện thoại</option>
+                <option>Laptop</option>
+                <option>Tablet</option>
+                <option>Phụ kiện</option>
               </select>
             </div>
           </div>
 
           {/* Search Bar */}
           <div className="flex-1 max-w-md mx-4 xl:mx-8">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Tìm kiếm sản phẩm..."
-                className="w-full px-4 py-2 pr-10 text-black rounded-md border focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            </div>
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm sản phẩm..." 
+              className="w-full px-4 py-2 rounded-md bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
-          {/* Right Actions */}
+          {/* User Actions */}
           <div className="flex items-center space-x-2 xl:space-x-4">
-            {/* Cart */}
-            <button className="flex items-center space-x-1 px-2 xl:px-3 py-1 border border-white rounded-md hover:bg-white hover:text-black transition-colors">
-              <ShoppingCart className="w-4 h-4" />
-              <span className="text-sm hidden xl:inline">Giỏ hàng</span>
+            <button className="flex items-center space-x-1 hover:text-gray-300 transition-colors">
+              <span className="text-sm xl:text-base">🛒</span>
+              <span className="text-xs xl:text-sm">Giỏ hàng</span>
             </button>
             
-            {/* User */}
-            <button className="flex items-center space-x-1 px-2 xl:px-3 py-1 border border-white rounded-md hover:bg-white hover:text-black transition-colors">
-              <User className="w-4 h-4" />
-              <span className="text-sm hidden xl:inline">Nguyên</span>
+            <button className="flex items-center space-x-1 hover:text-gray-300 transition-colors">
+              <span className="text-sm xl:text-base">❤️</span>
+              <span className="text-xs xl:text-sm">Quan tâm</span>
             </button>
+            
+            <button className="bg-blue-600 hover:bg-blue-700 px-3 xl:px-4 py-2 rounded-md text-xs xl:text-sm transition-colors">
+              Đăng nhập
+            </button>
+            
+            {/* <button className="bg-green-600 hover:bg-green-700 px-3 xl:px-4 py-2 rounded-md text-xs xl:text-sm transition-colors">
+              Đăng ký
+            </button> */}
           </div>
         </div>
 
@@ -55,32 +59,32 @@ const Header = () => {
         <div className="lg:hidden">
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-xl font-bold">DG</h1>
-            <div className="flex items-center space-x-2">
-              <button className="p-2">
-                <ShoppingCart className="w-5 h-5" />
+            
+            <div className="flex items-center space-x-3">
+              <button className="text-white hover:text-gray-300">
+                <span className="text-lg">🛒</span>
               </button>
-              <button className="p-2">
-                <User className="w-5 h-5" />
+              <button className="text-white hover:text-gray-300">
+                <span className="text-lg">❤️</span>
+              </button>
+              <button className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">
+                👤
               </button>
             </div>
           </div>
           
           {/* Mobile Search */}
           <div className="flex space-x-2">
-            <select className="bg-white text-black px-2 py-2 rounded-md text-sm border flex-shrink-0">
+            <select className="bg-white text-black px-2 py-2 rounded text-sm flex-shrink-0">
               <option>Danh mục</option>
-              <option>Điện tử</option>
-              <option>Thời trang</option>
-              <option>Gia dụng</option>
+              <option>Điện thoại</option>
+              <option>Laptop</option>
             </select>
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Tìm kiếm..."
-                className="w-full px-3 py-2 pr-10 text-black rounded-md border focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            </div>
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm..." 
+              className="flex-1 px-3 py-2 rounded bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
         </div>
       </div>
