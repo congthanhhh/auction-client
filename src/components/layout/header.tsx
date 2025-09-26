@@ -1,91 +1,409 @@
-import { Search } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { productService, type Product } from "../../services/productService";
 
 const Header = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [mobileSearchQuery, setMobileSearchQuery] = useState("");
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showMobileCategoryDropdown, setShowMobileCategoryDropdown] = useState(false);
+  
+  // Autocomplete states
+  const [suggestions, setSuggestions] = useState<Product[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [mobileSuggestions, setMobileSuggestions] = useState<Product[]>([]);
+  const [showMobileSuggestions, setShowMobileSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const [mobileActiveSuggestionIndex, setMobileActiveSuggestionIndex] = useState(-1);
+  
+  const navigate = useNavigate();
+  
+  const desktopDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileDropdownRef = useRef<HTMLDivElement>(null);
+  const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside to close dropdowns and suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (desktopDropdownRef.current && !desktopDropdownRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+      if (mobileDropdownRef.current && !mobileDropdownRef.current.contains(event.target as Node)) {
+        setShowMobileCategoryDropdown(false);
+      }
+      if (desktopSearchRef.current && !desktopSearchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+      }
+      if (mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
+        setShowMobileSuggestions(false);
+        setMobileActiveSuggestionIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Fetch suggestions for desktop search
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (searchQuery.length >= 1) {
+        const results = await productService.getSuggestions(searchQuery);
+        setSuggestions(results);
+        setShowSuggestions(true);
+        setActiveSuggestionIndex(-1);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchSuggestions, 300); // Debounce 300ms
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Fetch suggestions for mobile search
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (mobileSearchQuery.length >= 1) {
+        const results = await productService.getSuggestions(mobileSearchQuery);
+        setMobileSuggestions(results);
+        setShowMobileSuggestions(true);
+        setMobileActiveSuggestionIndex(-1);
+      } else {
+        setMobileSuggestions([]);
+        setShowMobileSuggestions(false);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchSuggestions, 300); // Debounce 300ms
+    return () => clearTimeout(timeoutId);
+  }, [mobileSearchQuery]);
+
+  const handleSearch = (query: string) => {
+    if (query.trim()) {
+      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+      setShowSuggestions(false);
+      setShowMobileSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (productName: string, isMobile: boolean = false) => {
+    const query = productName;
+    if (isMobile) {
+      setMobileSearchQuery(query);
+      setShowMobileSuggestions(false);
+    } else {
+      setSearchQuery(query);
+      setShowSuggestions(false);
+    }
+    handleSearch(query);
+  };
+
+  const handleDesktopKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      if (activeSuggestionIndex >= 0 && suggestions[activeSuggestionIndex]) {
+        handleSuggestionClick(suggestions[activeSuggestionIndex].name);
+      } else {
+        handleSearch(searchQuery);
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
+    }
+  };
+
+  const handleMobileKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      if (mobileActiveSuggestionIndex >= 0 && mobileSuggestions[mobileActiveSuggestionIndex]) {
+        handleSuggestionClick(mobileSuggestions[mobileActiveSuggestionIndex].name, true);
+      } else {
+        handleSearch(mobileSearchQuery);
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setMobileActiveSuggestionIndex(prev => 
+        prev < mobileSuggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setMobileActiveSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === "Escape") {
+      setShowMobileSuggestions(false);
+      setMobileActiveSuggestionIndex(-1);
+    }
+  };
+
   return (
     <header className="bg-black text-white sticky top-0 z-50 shadow-md">
-      <div className="container mx-auto px-4 py-3">
+      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
         {/* Desktop Header */}
         <div className="hidden lg:flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl xl:text-2xl font-bold">
+          <div className="flex items-center space-x-3 xl:space-x-4">
+            <h1
+              className="text-lg xl:text-2xl font-bold cursor-pointer hover:text-gray-300 transition-colors"
+              onClick={() => navigate("/")}
+            >
               DG
             </h1>
-            
+
             {/* Category Dropdown */}
-            <div className="flex items-center">
-              <select className="bg-white text-black px-3 py-2 rounded text-sm border-none focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option>Danh mục</option>
-                <option>Điện thoại</option>
-                <option>Laptop</option>
-                <option>Tablet</option>
-                <option>Phụ kiện</option>
-              </select>
+            <div className="relative" ref={desktopDropdownRef}>
+              <button 
+                onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                className="bg-white text-black px-2 py-1.5 xl:px-3 xl:py-2 rounded-xl text-xs xl:text-sm w-24 xl:w-28 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between hover:bg-gray-100 transition-colors"
+              >
+                <span>Danh mục</span>
+                <ChevronDown className="w-3 h-3 xl:w-4 xl:h-4" />
+              </button>
+              
+              {showCategoryDropdown && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-32 xl:w-36">
+                  <button className="w-full text-left px-3 py-2 text-xs xl:text-sm text-black hover:bg-gray-100 transition-colors rounded-t-lg">
+                    Điện thoại
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-xs xl:text-sm text-black hover:bg-gray-100 transition-colors">
+                    Laptop
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-xs xl:text-sm text-black hover:bg-gray-100 transition-colors">
+                    Tablet
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-xs xl:text-sm text-black hover:bg-gray-100 transition-colors rounded-b-lg">
+                    Phụ kiện
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="flex-1 max-w-md mx-4 xl:mx-8">
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm sản phẩm..." 
-              className="w-full px-4 py-2 rounded-md bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          {/* Search Bar with Autocomplete */}
+          <div className="flex-1 max-w-lg mx-4 xl:mx-8 relative" ref={desktopSearchRef}>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Tìm kiếm sản phẩm..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleDesktopKeyPress}
+                onFocus={() => {
+                  if (suggestions.length > 0) {
+                    setShowSuggestions(true);
+                  }
+                }}
+                className="w-full px-3 py-1.5 xl:px-4 xl:py-2 pr-10 rounded-md bg-white text-black placeholder-gray-500 text-sm xl:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={() => handleSearch(searchQuery)}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <Search className="w-4 h-4 xl:w-5 xl:h-5" />
+              </button>
+            </div>
+
+            {/* Desktop Suggestions Dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                {suggestions.map((product, index) => (
+                  <div
+                    key={product.id}
+                    onClick={() => handleSuggestionClick(product.name)}
+                    className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
+                      index === activeSuggestionIndex ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-8 h-8 object-cover rounded"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMiA4VjE2TTggMTJIMTYiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+';
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {product.name}
+                        </p>
+                        <p className="text-sm text-red-600 font-semibold">
+                          {product.currentPrice}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* User Actions */}
           <div className="flex items-center space-x-2 xl:space-x-4">
             <button className="flex items-center space-x-1 hover:text-gray-300 transition-colors">
-              <span className="text-sm xl:text-base">🛒</span>
-              <span className="text-xs xl:text-sm">Giỏ hàng</span>
+              <ShoppingCart className="w-4 h-4" />
+              <span className="text-xs xl:text-sm hidden xl:inline">
+                Giỏ hàng
+              </span>
             </button>
-            
+
             <button className="flex items-center space-x-1 hover:text-gray-300 transition-colors">
               <span className="text-sm xl:text-base">❤️</span>
-              <span className="text-xs xl:text-sm">Quan tâm</span>
+              <span className="text-xs xl:text-sm hidden xl:inline">
+                Quan tâm
+              </span>
             </button>
-            
-            <button className="bg-blue-600 hover:bg-blue-700 px-3 xl:px-4 py-2 rounded-md text-xs xl:text-sm transition-colors">
-              Đăng nhập
+
+            <button className="bg-blue-600 hover:bg-blue-700 px-2 xl:px-4 py-1.5 xl:py-2 rounded-md text-xs xl:text-sm transition-colors flex items-center">
+              <User className="w-3 h-3 xl:w-4 xl:h-4 mr-1" />
+              <span className="hidden xl:inline">Đăng nhập</span>
             </button>
-            
-            {/* <button className="bg-green-600 hover:bg-green-700 px-3 xl:px-4 py-2 rounded-md text-xs xl:text-sm transition-colors">
-              Đăng ký
-            </button> */}
           </div>
         </div>
 
-        {/* Mobile Header */}
+        {/* Mobile/Tablet Header */}
         <div className="lg:hidden">
-          <div className="flex items-center justify-between mb-3">
-            <h1 className="text-xl font-bold">DG</h1>
-            
-            <div className="flex items-center space-x-3">
-              <button className="text-white hover:text-gray-300">
-                <span className="text-lg">🛒</span>
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <h1
+              className="text-lg sm:text-xl font-bold cursor-pointer hover:text-gray-300 transition-colors"
+              onClick={() => navigate("/")}
+            >
+              DG
+            </h1>
+
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <button className="text-white hover:text-gray-300 transition-colors">
+                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <button className="text-white hover:text-gray-300">
-                <span className="text-lg">❤️</span>
+              <button className="text-white hover:text-gray-300 transition-colors">
+                <span className="text-base sm:text-lg">❤️</span>
               </button>
-              <button className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">
-                👤
+              <button className="bg-blue-600 hover:bg-blue-700 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors">
+                <User className="w-3 h-3 sm:w-4 sm:h-4" />
+              </button>
+              <button
+                className="text-white hover:text-gray-300 transition-colors md:hidden"
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+              >
+                <Menu className="w-5 h-5" />
               </button>
             </div>
           </div>
-          
+
           {/* Mobile Search */}
           <div className="flex space-x-2">
-            <select className="bg-white text-black px-2 py-2 rounded text-sm flex-shrink-0">
-              <option>Danh mục</option>
-              <option>Điện thoại</option>
-              <option>Laptop</option>
-            </select>
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm..." 
-              className="flex-1 px-3 py-2 rounded bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative" ref={mobileDropdownRef}>
+              <button 
+                onClick={() => setShowMobileCategoryDropdown(!showMobileCategoryDropdown)}
+                className="bg-white text-black px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-xs sm:text-sm flex-shrink-0 w-20 sm:w-24 flex items-center justify-between hover:bg-gray-100 transition-colors"
+              >
+                <span>Danh mục</span>
+                <ChevronDown className="w-2 h-2 sm:w-3 sm:h-3" />
+              </button>
+              
+              {showMobileCategoryDropdown && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-28 sm:w-32">
+                  <button className="w-full text-left px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-black hover:bg-gray-100 transition-colors rounded-t-lg">
+                    Điện thoại
+                  </button>
+                  <button className="w-full text-left px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-black hover:bg-gray-100 transition-colors">
+                    Laptop
+                  </button>
+                  <button className="w-full text-left px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-black hover:bg-gray-100 transition-colors">
+                    Tablet
+                  </button>
+                  <button className="w-full text-left px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-black hover:bg-gray-100 transition-colors rounded-b-lg">
+                    Phụ kiện
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* Mobile Search with Autocomplete */}
+            <div className="flex-1 relative" ref={mobileSearchRef}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm..."
+                value={mobileSearchQuery}
+                onChange={(e) => setMobileSearchQuery(e.target.value)}
+                onKeyDown={handleMobileKeyPress}
+                onFocus={() => {
+                  if (mobileSuggestions.length > 0) {
+                    setShowMobileSuggestions(true);
+                  }
+                }}
+                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 pr-8 sm:pr-10 rounded bg-white text-black placeholder-gray-500 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={() => handleSearch(mobileSearchQuery)}
+                className="absolute right-1.5 sm:right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <Search className="w-3 h-3 sm:w-4 sm:h-4" />
+              </button>
+
+              {/* Mobile Suggestions Dropdown */}
+              {showMobileSuggestions && mobileSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+                  {mobileSuggestions.map((product, index) => (
+                    <div
+                      key={product.id}
+                      onClick={() => handleSuggestionClick(product.name, true)}
+                      className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
+                        index === mobileActiveSuggestionIndex ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-6 h-6 object-cover rounded"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMiA4VjE2TTggMTJIMTYiIHN0cm9rZT0iIzlDQTNBRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+';
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-900 truncate">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-red-600 font-semibold">
+                            {product.currentPrice}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Mobile Menu Dropdown */}
+          {showMobileMenu && (
+            <div className="md:hidden mt-3 py-2 bg-gray-800 rounded-lg">
+              <div className="flex flex-col space-y-2 px-3">
+                <button className="text-left text-sm text-white hover:text-gray-300 py-1">
+                  Trang chủ
+                </button>
+                <button className="text-left text-sm text-white hover:text-gray-300 py-1">
+                  Sản phẩm
+                </button>
+                <button className="text-left text-sm text-white hover:text-gray-300 py-1">
+                  Liên hệ
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

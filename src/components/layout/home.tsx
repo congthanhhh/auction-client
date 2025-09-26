@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import Header from './header';
 import Footer from './footer';
 import ProductCard from '../ui/product-card';
@@ -12,17 +13,38 @@ import Autoplay from "embla-carousel-autoplay";
 import imgBanner1 from '../../assets/imgbaner1.jpg';
 import imgBanner2 from '../../assets/imgbaner2.webp';
 import imgBanner3 from '../../assets/imgbaner3.webp';
-import productImage from '../../assets/productex.webp';
+import type { Product } from '../../services/productService';
+import { productService } from '../../services/productService';
 
 const Home = () => {
-  // Mock data for products
-  const mockProducts = Array.from({ length: 10 }, (_, i) => ({
-    id: `${i + 1}`,
-    name: `iPhone 17 Pro Max 256GB | Chính hãng`,
-    currentPrice: '37.999.000đ',
-    image: productImage,
-    status: 'active' as const
-  }));
+  const [activeProducts, setActiveProducts] = useState<Product[]>([]);
+  const [upcomingProducts, setUpcomingProducts] = useState<Product[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      setLoading(true);
+      try {
+        const [activeData, upcomingData, featuredData] = await Promise.all([
+          productService.getActiveAuctionProducts(),
+          productService.getUpcomingAuctionProducts(),
+          productService.getFeaturedProducts()
+        ]);
+
+        setActiveProducts(activeData);
+        setUpcomingProducts(upcomingData);
+        setFeaturedProducts(featuredData);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllProducts();
+  }, []);
 
   // Banner data
   const bannerData = [
@@ -52,15 +74,30 @@ const Home = () => {
     }
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        <div className="flex items-center justify-center h-48 sm:h-64 lg:h-80">
+          <div className="text-center px-4">
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-3 sm:mb-4"></div>
+            <p className="text-gray-600 text-sm sm:text-base">Đang tải sản phẩm...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
       
       {/* Hero Banner */}
-      <section className="bg-gray-200 py-6 sm:py-8 lg:py-12">
-        <div className="container mx-auto px-4">
+      <section className="bg-gray-200 py-3 sm:py-6 lg:py-8 xl:py-12">
+        <div className="container mx-auto px-2 sm:px-4">
           <Carousel 
-            className="w-full max-w-6xl mx-auto"
+            className="w-full max-w-7xl mx-auto"
             plugins={[
               Autoplay({
                 delay: 3000,
@@ -74,67 +111,67 @@ const Home = () => {
                     <img 
                       src={banner.image} 
                       alt={banner.title}
-                      className="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover"
+                      className="w-full h-32 xs:h-40 sm:h-48 md:h-64 lg:h-80 xl:h-96 object-cover"
                     />
                   </div>
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="left-2 sm:left-4 hidden sm:flex" />
-            <CarouselNext className="right-2 sm:right-4 hidden sm:flex" />
+            <CarouselPrevious className="left-1 sm:left-2 lg:left-4 hidden sm:flex" />
+            <CarouselNext className="right-1 sm:right-2 lg:right-4 hidden sm:flex" />
           </Carousel>
         </div>
       </section>
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-4 sm:py-8">
+      <main className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 lg:py-8">
         {/* Auction Products Section */}
-        <section className="mb-8 sm:mb-12">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">
-              SẢN PHẨM ĐANG ĐẤU GIÁ
+        <section className="mb-6 sm:mb-8 lg:mb-12">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 lg:mb-6">
+            <h2 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">
+              SẢN PHẨM ĐANG ĐẤU GIÁ ({activeProducts.length})
             </h2>
-            <button className="text-blue-600 hover:underline text-sm sm:text-base self-start sm:self-auto">
+            <button className="text-blue-600 hover:underline text-xs sm:text-sm lg:text-base self-start sm:self-auto transition-colors">
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-            {mockProducts.map((product) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+            {activeProducts.slice(0, 10).map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>
         </section>
 
         {/* Upcoming Auctions Section */}
-        <section className="mb-8 sm:mb-12">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">
-              SẢN PHẨM SẮP ĐẤU GIÁ
+        <section className="mb-6 sm:mb-8 lg:mb-12">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 lg:mb-6">
+            <h2 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">
+              SẢN PHẨM SẮP ĐẤU GIÁ ({upcomingProducts.length})
             </h2>
-            <button className="text-blue-600 hover:underline text-sm sm:text-base self-start sm:self-auto">
+            <button className="text-blue-600 hover:underline text-xs sm:text-sm lg:text-base self-start sm:self-auto transition-colors">
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-            {mockProducts.map((product) => (
-              <ProductCard key={`upcoming-${product.id}`} {...product} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+            {upcomingProducts.slice(0, 10).map((product) => (
+              <ProductCard key={product.id} {...product} />
             ))}
           </div>
         </section>
 
         {/* Featured Products Section */}
-        <section className="mb-8 sm:mb-12">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">
-              SẢN PHẨM NỔI BẬT
+        <section className="mb-6 sm:mb-8 lg:mb-12">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 lg:mb-6">
+            <h2 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">
+              SẢN PHẨM NỔI BẬT ({featuredProducts.length})
             </h2>
-            <button className="text-blue-600 hover:underline text-sm sm:text-base self-start sm:self-auto">
+            <button className="text-blue-600 hover:underline text-xs sm:text-sm lg:text-base self-start sm:self-auto transition-colors">
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-            {mockProducts.slice(0, 10).map((product) => (
-              <ProductCard key={`featured-${product.id}`} {...product} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+            {featuredProducts.slice(0, 10).map((product) => (
+              <ProductCard key={product.id} {...product} />
             ))}
           </div>
         </section>

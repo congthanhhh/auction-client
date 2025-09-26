@@ -2,19 +2,21 @@ import { Facebook, Twitter, Github } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-800 text-white py-6 sm:py-8">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+    <footer className="bg-gray-800 text-white py-4 sm:py-6">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 lg:gap-16">
           {/* Left side - Company info */}
-          <div>
-            <h3 className="text-lg font-bold mb-4 ">
+          <div className="text-left">
+            <h3 className="text-lg font-bold mb-2">
               DG - Đấu giá theo cách của bạn
             </h3>
             <p className="text-gray-300 mb-2">
-              Website đấu giá hàng đầu Việt Nam, nâng cao chất lượng sản phẩm
+              Website đấu giá hàng đầu Việt Nam, nâng cao chất lượng sản phẩm,
             </p>
-            <p className="text-gray-300 mb-2 ">Địa chỉ: An toàn cách</p>
-            <p className="text-gray-300 mb-4 ">
+            <p className="text-gray-300 mb-2">
+              đột phá phong cách.
+            </p>
+            <p className="text-gray-300 mb-4">
               Uy tín - Chất lượng - Minh bạch
             </p>
 
@@ -42,8 +44,8 @@ const Footer = () => {
           </div>
 
           {/* Right side - Links */}
-          <div>
-            <h3 className="text-lg font-bold mb-4">Liên kết nhanh</h3>
+          <div className="text-right">
+            <h3 className="text-lg font-bold mb-2">Liên kết nhanh</h3>
             <div className="space-y-2">
               <a
                 href="#"
@@ -55,7 +57,7 @@ const Footer = () => {
                 href="#"
                 className="block text-gray-300 hover:text-white transition-colors"
               >
-                Tin tức
+                Tìm kiếm
               </a>
               <a
                 href="#"
@@ -74,7 +76,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom border */}
-        <div className="border-t border-gray-700 mt-6 sm:mt-8 pt-4 text-center text-gray-400">
+        <div className="border-t border-gray-700 mt-4 sm:mt-6 pt-3 sm:pt-4 text-center text-gray-400">
           <p className="text-sm sm:text-base">&copy; 2024 DG - Đấu giá. All rights reserved.</p>
         </div>
       </div>

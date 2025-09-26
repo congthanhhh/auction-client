@@ -1,0 +1,268 @@
+{
+  "activeProducts": [
+    {
+      "id": "1",
+      "name": "iPhone 15 Pro Max 256GB | Chính hãng VN/A",
+      "currentPrice": "28.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-15T10:00:00Z",
+      "description": "iPhone 15 Pro Max với chip A17 Pro mạnh mẽ"
+    },
+    {
+      "id": "2",
+      "name": "Samsung Galaxy S24 Ultra 512GB | Snap Dragon",
+      "currentPrice": "25.500.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-16T14:30:00Z",
+      "description": "Galaxy S24 Ultra với bút S Pen tích hợp"
+    },
+    {
+      "id": "3",
+      "name": "MacBook Air M3 13 inch 256GB | Chính hãng Apple",
+      "currentPrice": "27.999.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-17T09:15:00Z",
+      "description": "MacBook Air M3 siêu mỏng, hiệu năng vượt trội"
+    },
+    {
+      "id": "4",
+      "name": "iPad Pro 12.9 M2 WiFi 128GB | Space Gray",
+      "currentPrice": "22.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-18T16:45:00Z",
+      "description": "iPad Pro với màn hình Liquid Retina XDR"
+    },
+    {
+      "id": "5",
+      "name": "AirPods Pro 2nd Gen | USB-C | Chính hãng",
+      "currentPrice": "5.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-19T11:20:00Z",
+      "description": "AirPods Pro với chống ồn chủ động nâng cấp"
+    },
+    {
+      "id": "6",
+      "name": "Apple Watch Series 9 45mm | GPS",
+      "currentPrice": "9.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-20T10:30:00Z",
+      "description": "Apple Watch Series 9 với chip S9 mạnh mẽ"
+    },
+    {
+      "id": "7",
+      "name": "Sony WH-1000XM5 | Wireless Headphones",
+      "currentPrice": "7.490.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-21T14:15:00Z",
+      "description": "Tai nghe chống ồn hàng đầu thế giới"
+    },
+    {
+      "id": "8",
+      "name": "Microsoft Surface Pro 9 | Core i5",
+      "currentPrice": "24.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-22T16:00:00Z",
+      "description": "Laptop tablet 2 trong 1 từ Microsoft"
+    },
+    {
+      "id": "9",
+      "name": "Nintendo Switch OLED | Neon Blue/Red",
+      "currentPrice": "8.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-23T12:45:00Z",
+      "description": "Máy chơi game cầm tay Nintendo Switch"
+    },
+    {
+      "id": "10",
+      "name": "Canon EOS R50 | Kit 18-45mm",
+      "currentPrice": "16.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-24T09:20:00Z",
+      "description": "Máy ảnh mirrorless cho người mới bắt đầu"
+    }
+  ],
+  "upcomingProducts": [
+    {
+      "id": "11",
+      "name": "iPhone 16 Pro 128GB | Titan Tự Nhiên",
+      "currentPrice": "32.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "25.000.000đ",
+      "startTime": "2024-02-20T10:00:00Z"
+    },
+    {
+      "id": "12",
+      "name": "Dell XPS 13 Plus | Core i7-12700H | 16GB RAM",
+      "currentPrice": "35.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "28.000.000đ",
+      "startTime": "2024-02-21T14:00:00Z"
+    },
+    {
+      "id": "13",
+      "name": "Sony WH-1000XM5 | Chống ồn chủ động",
+      "currentPrice": "7.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "5.500.000đ",
+      "startTime": "2024-02-22T09:30:00Z"
+    },
+    {
+      "id": "14",
+      "name": "Apple Watch Ultra 2 49mm | Ocean Band",
+      "currentPrice": "18.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "15.000.000đ",
+      "startTime": "2024-02-23T11:00:00Z"
+    },
+    {
+      "id": "15",
+      "name": "Microsoft Surface Pro 9 | Core i5 | 8GB",
+      "currentPrice": "24.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "20.000.000đ",
+      "startTime": "2024-02-24T16:30:00Z"
+    },
+    {
+      "id": "16",
+      "name": "iPad Pro 12.9 M2 | 256GB | Space Gray",
+      "currentPrice": "28.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "22.000.000đ",
+      "startTime": "2024-02-25T13:00:00Z"
+    },
+    {
+      "id": "17",
+      "name": "Samsung Galaxy S24 Ultra | 512GB",
+      "currentPrice": "31.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "26.000.000đ",
+      "startTime": "2024-02-26T15:30:00Z"
+    },
+    {
+      "id": "18",
+      "name": "LG OLED C3 55 inch | 4K Smart TV",
+      "currentPrice": "42.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "35.000.000đ",
+      "startTime": "2024-02-27T10:15:00Z"
+    },
+    {
+      "id": "19",
+      "name": "Asus ROG Zephyrus G14 | RTX 4060",
+      "currentPrice": "38.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "32.000.000đ",
+      "startTime": "2024-02-28T14:45:00Z"
+    },
+    {
+      "id": "20",
+      "name": "Sony α7 IV | Body Only | Mirrorless",
+      "currentPrice": "52.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "45.000.000đ",
+      "startTime": "2024-03-01T11:20:00Z"
+    }
+  ],
+  "featuredProducts": [
+    {
+      "id": "21",
+      "name": "MacBook Pro 16 M3 Max | 1TB SSD | Space Black",
+      "currentPrice": "89.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "MacBook Pro 16 inch với chip M3 Max mạnh mẽ nhất"
+    },
+    {
+      "id": "22",
+      "name": "Samsung OLED 65 inch 4K | Smart TV 2024",
+      "currentPrice": "45.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "Smart TV OLED 4K với chất lượng hình ảnh tuyệt vời"
+    },
+    {
+      "id": "23",
+      "name": "PlayStation 5 Slim | 1TB | Chính hãng Sony",
+      "currentPrice": "13.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "PS5 Slim với thiết kế gọn gàng hơn"
+    },
+    {
+      "id": "24",
+      "name": "Canon EOS R6 Mark II | Kit 24-105mm",
+      "currentPrice": "65.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "Máy ảnh mirrorless full frame chuyên nghiệp"
+    },
+    {
+      "id": "25",
+      "name": "Dyson V15 Detect | Máy hút bụi không dây",
+      "currentPrice": "18.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "Máy hút bụi không dây với công nghệ laser"
+    },
+    {
+      "id": "26",
+      "name": "iPad Air 5th Gen | M1 Chip | 256GB",
+      "currentPrice": "19.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "iPad Air với chip M1 mạnh mẽ và thiết kế mỏng"
+    },
+    {
+      "id": "27",
+      "name": "Bose QuietComfort 45 | Wireless Headphones",
+      "currentPrice": "8.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "Tai nghe chống ồn cao cấp từ Bose"
+    },
+    {
+      "id": "28",
+      "name": "Xiaomi Mi 13 Ultra | 512GB | Leica Camera",
+      "currentPrice": "26.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "Smartphone flagship với camera Leica"
+    },
+    {
+      "id": "29",
+      "name": "Tesla Model Y Performance | AWD",
+      "currentPrice": "2.199.000.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "SUV điện hạng sang từ Tesla"
+    },
+    {
+      "id": "30",
+      "name": "Rolex Submariner Date | Steel 41mm",
+      "currentPrice": "299.000.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "Đồng hồ luxury Swiss Rolex Submariner"
+    }
+  ]
+}
