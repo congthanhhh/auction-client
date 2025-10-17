@@ -2,6 +2,8 @@ import { Search, ShoppingCart, User, Menu, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { productService, type Product } from "../../services/productService";
+import LoginDialog from "../pop-up/login";
+import RegisterDialog from "../pop-up/register";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -9,6 +11,8 @@ const Header = () => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showMobileCategoryDropdown, setShowMobileCategoryDropdown] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   
   // Autocomplete states
   const [suggestions, setSuggestions] = useState<Product[]>([]);
@@ -149,14 +153,14 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-black text-white sticky top-0 z-50 shadow-md">
-      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
+    <header className="bg-black text-white fixed top-0 left-0 right-0 z-[100] shadow-md w-full">
+      <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 py-2 xs:py-2.5 sm:py-3 lg:py-4 max-w-7xl">
         {/* Desktop Header */}
-        <div className="hidden lg:flex items-center justify-between">
+        <div className="hidden lg:flex items-center justify-between gap-4 xl:gap-6">
           {/* Logo */}
-          <div className="flex items-center space-x-3 xl:space-x-4">
+          <div className="flex items-center space-x-3 xl:space-x-4 flex-shrink-0">
             <h1
-              className="text-lg xl:text-2xl font-bold cursor-pointer hover:text-gray-300 transition-colors"
+              className="text-xl xl:text-2xl 2xl:text-3xl font-bold cursor-pointer hover:text-gray-300 transition-colors"
               onClick={() => navigate("/")}
             >
               DG
@@ -166,24 +170,24 @@ const Header = () => {
             <div className="relative" ref={desktopDropdownRef}>
               <button 
                 onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                className="bg-white text-black px-2 py-1.5 xl:px-3 xl:py-2 rounded-xl text-xs xl:text-sm w-24 xl:w-28 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                className="bg-white text-black px-3 py-2 xl:px-4 xl:py-2.5 rounded-xl text-sm xl:text-base w-28 xl:w-32 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between hover:bg-gray-100 transition-colors"
               >
-                <span>Danh mục</span>
-                <ChevronDown className="w-3 h-3 xl:w-4 xl:h-4" />
+                <span className="truncate">Danh mục</span>
+                <ChevronDown className="w-4 h-4 xl:w-5 xl:h-5 flex-shrink-0" />
               </button>
               
               {showCategoryDropdown && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-32 xl:w-36">
-                  <button className="w-full text-left px-3 py-2 text-xs xl:text-sm text-black hover:bg-gray-100 transition-colors rounded-t-lg">
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[110] w-36 xl:w-40 2xl:w-44">
+                  <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors rounded-t-lg">
                     Điện thoại
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-xs xl:text-sm text-black hover:bg-gray-100 transition-colors">
-                    Laptop
+                  <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors">
+                    Laptop  
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-xs xl:text-sm text-black hover:bg-gray-100 transition-colors">
+                  <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors">
                     Tablet
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-xs xl:text-sm text-black hover:bg-gray-100 transition-colors rounded-b-lg">
+                  <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors rounded-b-lg">
                     Phụ kiện
                   </button>
                 </div>
@@ -192,7 +196,7 @@ const Header = () => {
           </div>
 
           {/* Search Bar with Autocomplete */}
-          <div className="flex-1 max-w-lg mx-4 xl:mx-8 relative" ref={desktopSearchRef}>
+          <div className="flex-1 max-w-2xl mx-6 xl:mx-8 relative" ref={desktopSearchRef}>
             <div className="relative">
               <input
                 type="text"
@@ -205,19 +209,19 @@ const Header = () => {
                     setShowSuggestions(true);
                   }
                 }}
-                className="w-full px-3 py-1.5 xl:px-4 xl:py-2 pr-10 rounded-md bg-white text-black placeholder-gray-500 text-sm xl:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 xl:px-5 xl:py-3 pr-12 rounded-lg bg-white text-black placeholder-gray-500 text-sm xl:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
               <button
                 onClick={() => handleSearch(searchQuery)}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors p-1"
               >
-                <Search className="w-4 h-4 xl:w-5 xl:h-5" />
+                <Search className="w-5 h-5 xl:w-6 xl:h-6" />
               </button>
             </div>
 
             {/* Desktop Suggestions Dropdown */}
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-[110] max-h-60 overflow-y-auto">
                 {suggestions.map((product, index) => (
                   <div
                     key={product.id}
@@ -251,24 +255,27 @@ const Header = () => {
           </div>
 
           {/* User Actions */}
-          <div className="flex items-center space-x-2 xl:space-x-4">
-            <button className="flex items-center space-x-1 hover:text-gray-300 transition-colors">
-              <ShoppingCart className="w-4 h-4" />
-              <span className="text-xs xl:text-sm hidden xl:inline">
+          <div className="flex items-center space-x-3 xl:space-x-4 flex-shrink-0">
+            <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
+              <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6" />
+              <span className="text-sm xl:text-base hidden xl:inline font-medium">
                 Giỏ hàng
               </span>
             </button>
 
-            <button className="flex items-center space-x-1 hover:text-gray-300 transition-colors">
-              <span className="text-sm xl:text-base">❤️</span>
-              <span className="text-xs xl:text-sm hidden xl:inline">
+            <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
+              <span className="text-lg xl:text-xl">❤️</span>
+              <span className="text-sm xl:text-base hidden xl:inline font-medium">
                 Quan tâm
               </span>
             </button>
 
-            <button className="bg-blue-600 hover:bg-blue-700 px-2 xl:px-4 py-1.5 xl:py-2 rounded-md text-xs xl:text-sm transition-colors flex items-center">
-              <User className="w-3 h-3 xl:w-4 xl:h-4 mr-1" />
-              <span className="hidden xl:inline">Đăng nhập</span>
+            <button 
+              className="bg-blue-600 hover:bg-blue-700 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-sm xl:text-base transition-colors flex items-center space-x-2 font-medium"
+              onClick={() => setShowLoginDialog(true)}
+            >
+              <User className="w-4 h-4 xl:w-5 xl:h-5" />
+              <span>Đăng nhập</span>
             </button>
           </div>
         </div>
@@ -290,7 +297,10 @@ const Header = () => {
               <button className="text-white hover:text-gray-300 transition-colors">
                 <span className="text-base sm:text-lg">❤️</span>
               </button>
-              <button className="bg-blue-600 hover:bg-blue-700 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors">
+              <button 
+                className="bg-blue-600 hover:bg-blue-700 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors"
+                onClick={() => setShowLoginDialog(true)}
+              >
                 <User className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
               <button
@@ -314,7 +324,7 @@ const Header = () => {
               </button>
               
               {showMobileCategoryDropdown && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-28 sm:w-32">
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[110] w-28 sm:w-32">
                   <button className="w-full text-left px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-black hover:bg-gray-100 transition-colors rounded-t-lg">
                     Điện thoại
                   </button>
@@ -354,7 +364,7 @@ const Header = () => {
 
               {/* Mobile Suggestions Dropdown */}
               {showMobileSuggestions && mobileSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-[110] max-h-48 overflow-y-auto">
                   {mobileSuggestions.map((product, index) => (
                     <div
                       key={product.id}
@@ -406,6 +416,28 @@ const Header = () => {
           )}
         </div>
       </div>
+      
+      {/* Login Dialog */}
+      <LoginDialog 
+        isOpen={showLoginDialog} 
+        onClose={() => setShowLoginDialog(false)}
+        onSwitchToRegister={() => {
+          console.log('Header: Switching from Login to Register'); // Debug log
+          setShowLoginDialog(false);
+          setShowRegisterDialog(true);
+        }}
+      />
+      
+      {/* Register Dialog */}
+      <RegisterDialog 
+        isOpen={showRegisterDialog} 
+        onClose={() => setShowRegisterDialog(false)}
+        onSwitchToLogin={() => {
+          console.log('Header: Switching from Register to Login'); // Debug log
+          setShowRegisterDialog(false);
+          setShowLoginDialog(true);
+        }}
+      />
     </header>
   );
 };

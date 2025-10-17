@@ -114,7 +114,37 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    /* Modern approach to prevent layout shift */
+    scrollbar-gutter: stable;
+  }
+  
   body {
     @apply bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+}
+
+/* Additional CSS to prevent layout shift on modal open */
+@layer utilities {
+  /* Force scrollbar to always be visible - most compatible approach */
+  html {
+    overflow-y: scroll !important;
+  }
+  
+  /* Prevent Radix from adding padding or hiding overflow */
+  body {
+    padding-right: 0 !important;
+  }
+  
+  /* Override any scroll lock attempts */
+  body[style*="overflow: hidden"] {
+    overflow: auto !important;
   }
 }

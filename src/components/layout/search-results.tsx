@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import Header from './header';
-import Footer from './footer';
+import PageLayout from './page-layout';
 import ProductCard from '../ui/product-card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Search } from 'lucide-react';
@@ -42,11 +41,8 @@ const SearchResults = () => {
 
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Header />
-      
-      <main className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 lg:py-8">
-        {/* Back button and search info */}
+    <PageLayout>
+      {/* Back button and search info */}
         <div className="mb-4 sm:mb-6">
           <Button
             variant="ghost"
@@ -137,10 +133,7 @@ const SearchResults = () => {
             </p>
           </div>
         )}
-      </main>
-
-      <Footer />
-    </div>
+    </PageLayout>
   );
 };
 

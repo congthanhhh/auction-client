@@ -76,12 +76,12 @@ const Home = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen relative">
         <Header />
-        <div className="flex items-center justify-center h-48 sm:h-64 lg:h-80">
-          <div className="text-center px-4">
-            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-3 sm:mb-4"></div>
-            <p className="text-gray-600 text-sm sm:text-base">Đang tải sản phẩm...</p>
+        <div className="flex items-center justify-center h-48 sm:h-64 lg:h-80 bg-gray-100" style={{ marginTop: '80px' }}>
+          <div className="text-center px-4 sm:px-6 lg:px-8">
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-14 sm:w-14 lg:h-16 lg:w-16 border-b-2 border-blue-600 mx-auto mb-4 sm:mb-6"></div>
+            <p className="text-gray-600 text-base sm:text-lg lg:text-xl font-medium">Đang tải sản phẩm...</p>
           </div>
         </div>
         <Footer />
@@ -90,12 +90,12 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen relative">
       <Header />
       
       {/* Hero Banner */}
-      <section className="bg-gray-200 py-3 sm:py-6 lg:py-8 xl:py-12">
-        <div className="container mx-auto px-2 sm:px-4">
+      <section className="bg-gray-200 py-3 xs:py-4 sm:py-6 md:py-8 lg:py-10 xl:py-12 w-full" style={{ marginTop: '80px' }}>
+        <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-12 max-w-7xl">
           <Carousel 
             className="w-full max-w-7xl mx-auto"
             plugins={[
@@ -107,70 +107,70 @@ const Home = () => {
             <CarouselContent>
               {bannerData.map((banner) => (
                 <CarouselItem key={banner.id}>
-                  <div className="relative bg-white rounded-lg overflow-hidden">
+                  <div className="relative bg-white rounded-lg lg:rounded-xl overflow-hidden shadow-sm">
                     <img 
                       src={banner.image} 
                       alt={banner.title}
-                      className="w-full h-32 xs:h-40 sm:h-48 md:h-64 lg:h-80 xl:h-96 object-cover"
+                      className="w-full h-36 xs:h-44 sm:h-56 md:h-72 lg:h-80 xl:h-96 object-cover"
                     />
                   </div>
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="left-1 sm:left-2 lg:left-4 hidden sm:flex" />
-            <CarouselNext className="right-1 sm:right-2 lg:right-4 hidden sm:flex" />
+            <CarouselPrevious className="left-2 sm:left-4 lg:left-6 hidden sm:flex w-10 h-10 lg:w-12 lg:h-12" />
+            <CarouselNext className="right-2 sm:right-4 lg:right-6 hidden sm:flex w-10 h-10 lg:w-12 lg:h-12" />
           </Carousel>
         </div>
       </section>
 
       {/* Main content */}
-      <main className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 lg:py-8">
+      <main className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-12 py-4 xs:py-6 sm:py-8 lg:py-10 xl:py-12 max-w-7xl">
         {/* Auction Products Section */}
-        <section className="mb-6 sm:mb-8 lg:mb-12">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 lg:mb-6">
-            <h2 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">
+        <section className="mb-8 sm:mb-10 lg:mb-16">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 lg:mb-8">
+            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800 mb-3 sm:mb-0">
               SẢN PHẨM ĐANG ĐẤU GIÁ ({activeProducts.length})
             </h2>
-            <button className="text-blue-600 hover:underline text-xs sm:text-sm lg:text-base self-start sm:self-auto transition-colors">
+            <button className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium">
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
-            {activeProducts.slice(0, 10).map((product) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+            {activeProducts.slice(0, 12).map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>
         </section>
 
         {/* Upcoming Auctions Section */}
-        <section className="mb-6 sm:mb-8 lg:mb-12">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 lg:mb-6">
-            <h2 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">
+        <section className="mb-8 sm:mb-10 lg:mb-16">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 lg:mb-8">
+            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800 mb-3 sm:mb-0">
               SẢN PHẨM SẮP ĐẤU GIÁ ({upcomingProducts.length})
             </h2>
-            <button className="text-blue-600 hover:underline text-xs sm:text-sm lg:text-base self-start sm:self-auto transition-colors">
+            <button className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium">
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
-            {upcomingProducts.slice(0, 10).map((product) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+            {upcomingProducts.slice(0, 12).map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>
         </section>
 
         {/* Featured Products Section */}
-        <section className="mb-6 sm:mb-8 lg:mb-12">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-4 lg:mb-6">
-            <h2 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800 mb-2 sm:mb-0">
+        <section className="mb-8 sm:mb-10 lg:mb-16">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 lg:mb-8">
+            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800 mb-3 sm:mb-0">
               SẢN PHẨM NỔI BẬT ({featuredProducts.length})
             </h2>
-            <button className="text-blue-600 hover:underline text-xs sm:text-sm lg:text-base self-start sm:self-auto transition-colors">
+            <button className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium">
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
-            {featuredProducts.slice(0, 10).map((product) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+            {featuredProducts.slice(0, 12).map((product) => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>

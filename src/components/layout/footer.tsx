@@ -2,43 +2,44 @@ import { Facebook, Twitter, Github } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-800 text-white py-4 sm:py-6">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 lg:gap-16">
-          {/* Left side - Company info */}
-          <div className="text-left">
-            <h3 className="text-lg font-bold mb-2">
+    <footer className="bg-gray-800 text-white py-6 sm:py-8 lg:py-12 w-full mt-auto">
+      <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-12 max-w-7xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12">
+          {/* Company info */}
+          <div className="sm:col-span-2 lg:col-span-2">
+            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 lg:mb-6">
               DG - Đấu giá theo cách của bạn
             </h3>
-            <p className="text-gray-300 mb-2">
+            <p className="text-gray-300 mb-2 sm:mb-3 text-sm sm:text-base lg:text-lg leading-relaxed">
               Website đấu giá hàng đầu Việt Nam, nâng cao chất lượng sản phẩm,
-            </p>
-            <p className="text-gray-300 mb-2">
               đột phá phong cách.
             </p>
-            <p className="text-gray-300 mb-4">
+            <p className="text-gray-300 mb-4 sm:mb-6 text-sm sm:text-base lg:text-lg font-medium">
               Uy tín - Chất lượng - Minh bạch
             </p>
 
             {/* Social Icons */}
-            <div className="flex space-x-4">
+            <div className="flex space-x-4 sm:space-x-6">
               <a
                 href="#"
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-gray-300 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-700"
+                aria-label="Facebook"
               >
-                <Facebook className="w-5 h-5" />
+                <Facebook className="w-5 h-5 sm:w-6 sm:h-6" />
               </a>
               <a
                 href="#"
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-gray-300 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-700"
+                aria-label="Twitter"
               >
-                <Twitter className="w-5 h-5" />
+                <Twitter className="w-5 h-5 sm:w-6 sm:h-6" />
               </a>
               <a
                 href="#"
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-gray-300 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-700"
+                aria-label="Github"
               >
-                <Github className="w-5 h-5" />
+                <Github className="w-5 h-5 sm:w-6 sm:h-6" />
               </a>
             </div>
           </div>
