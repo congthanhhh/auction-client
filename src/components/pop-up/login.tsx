@@ -7,6 +7,9 @@ import {
 } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Toast } from '../ui/toast';
+import { useAuth } from '../../contexts/AuthContext';
+import ForgotPassword from './forgot-password';
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -15,10 +18,15 @@ interface LoginDialogProps {
 }
 
 export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialogProps) {
+  const { login } = useAuth();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [errors, setErrors] = useState({ emailOrPhone: '', password: '' });
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const firstInputRef = useRef<HTMLInputElement>(null);
   
   // Focus first input when dialog opens
@@ -35,6 +43,7 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
     setEmailOrPhone('');
     setPassword('');
     setErrors({ emailOrPhone: '', password: '' });
+    setShowForgotPassword(false);
     onClose();
   }, [onClose]);
 
@@ -94,25 +103,30 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
     
     // Xử lý đăng nhập ở đây
     try {
-      // TODO: Gọi API đăng nhập
-      console.log('Đăng nhập với:', { emailOrPhone, password });
+      await login(emailOrPhone, password);
       
-      // Giả lập delay API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Đóng popup sau khi đăng nhập thành công
-      onClose();
-      
+      // Hiển thị toast thành công
+      setToastMessage('Đăng nhập thành công!');
+      setToastType('success');
+      setShowToast(true);
+
       // Reset form
       setEmailOrPhone('');
       setPassword('');
       setErrors({ emailOrPhone: '', password: '' });
-    } catch (error) {
+
+      // Đóng popup sau khi đăng nhập thành công
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+
+    } catch (error: unknown) {
       console.error('Lỗi đăng nhập:', error);
-      setErrors({ 
-        emailOrPhone: '', 
-        password: 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.' 
-      });
+      const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+      
+      setToastMessage(errorMessage);
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsLoading(false);
     }
@@ -210,16 +224,32 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
                 </button>
               </p>
               
-              <a 
-                href="#" 
-                className="block text-red-500 hover:text-red-600 font-medium text-sm transition-colors"
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-red-500 hover:text-red-600 font-medium text-sm transition-colors bg-transparent border-none p-0 cursor-pointer"
               >
                 Quên mật khẩu?
-              </a>
+              </button>
             </div>
           </div>
         </form>
       </DialogContent>
+      
+      {/* Toast notification */}
+      <Toast 
+        message={toastMessage}
+        type={toastType}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        duration={3000}
+      />
+
+      {/* Forgot Password Dialog */}
+      <ForgotPassword
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
     </Dialog>
   );
 }

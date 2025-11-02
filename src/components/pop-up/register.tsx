@@ -7,6 +7,8 @@ import {
 } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { Toast } from '../ui/toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface RegisterDialogProps {
   isOpen: boolean;
@@ -15,12 +17,16 @@ interface RegisterDialogProps {
 }
 
 export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDialogProps) {
+  const { register } = useAuth();
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [errors, setErrors] = useState({
     fullName: '',
     phoneNumber: '',
@@ -137,19 +143,12 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
     
     // Xử lý đăng ký ở đây
     try {
-      // TODO: Gọi API đăng ký
-      console.log('Đăng ký với:', {
+      await register({
         fullName,
         phoneNumber,
         email,
         password
       });
-      
-      // Giả lập delay API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Đóng popup sau khi đăng ký thành công
-      onClose();
       
       // Reset form
       setFullName('');
@@ -164,15 +163,27 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
         password: '',
         confirmPassword: ''
       });
-    } catch (error) {
+
+      // Hiển thị toast thành công
+      setToastMessage('Chúc mừng bạn đã đăng ký thành công!');
+      setToastType('success');
+      setShowToast(true);
+
+      // Đóng dialog register sau 1.5 giây và chuyển sang login
+      setTimeout(() => {
+        onClose();
+        if (onSwitchToLogin) {
+          onSwitchToLogin();
+        }
+      }, 1500);
+
+    } catch (error: unknown) {
       console.error('Lỗi đăng ký:', error);
-      setErrors({ 
-        fullName: '',
-        phoneNumber: '',
-        email: 'Email đã được sử dụng',
-        password: '',
-        confirmPassword: ''
-      });
+      const errorMessage = error instanceof Error ? error.message : 'Đăng ký thất bại. Vui lòng thử lại.';
+      
+      setToastMessage(errorMessage);
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsLoading(false);
     }
@@ -348,6 +359,15 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
           </div>
         </form>
       </DialogContent>
+      
+      {/* Toast notification */}
+      <Toast 
+        message={toastMessage}
+        type={toastType}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        duration={3000}
+      />
     </Dialog>
   );
 }

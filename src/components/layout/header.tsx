@@ -1,11 +1,13 @@
-import { Search, ShoppingCart, User, Menu, ChevronDown } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, ChevronDown, LogOut } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { productService, type Product } from "../../services/productService";
 import LoginDialog from "../pop-up/login";
 import RegisterDialog from "../pop-up/register";
+import { useAuth } from "../../contexts/AuthContext";
 
 const Header = () => {
+  const { user, isAuthenticated, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -13,6 +15,7 @@ const Header = () => {
   const [showMobileCategoryDropdown, setShowMobileCategoryDropdown] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   
   // Autocomplete states
   const [suggestions, setSuggestions] = useState<Product[]>([]);
@@ -28,6 +31,7 @@ const Header = () => {
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
   const desktopSearchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
   // Handle click outside to close dropdowns and suggestions
   useEffect(() => {
@@ -45,6 +49,9 @@ const Header = () => {
       if (mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
         setShowMobileSuggestions(false);
         setMobileActiveSuggestionIndex(-1);
+      }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false);
       }
     };
 
@@ -270,13 +277,47 @@ const Header = () => {
               </span>
             </button>
 
-            <button 
-              className="bg-blue-600 hover:bg-blue-700 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-sm xl:text-base transition-colors flex items-center space-x-2 font-medium"
-              onClick={() => setShowLoginDialog(true)}
-            >
-              <User className="w-4 h-4 xl:w-5 xl:h-5" />
-              <span>Đăng nhập</span>
-            </button>
+            {isAuthenticated ? (
+              <div className="relative" ref={userDropdownRef}>
+                <button 
+                  className="bg-green-600 hover:bg-green-700 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-sm xl:text-base transition-colors flex items-center space-x-2 font-medium"
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                >
+                  <User className="w-4 h-4 xl:w-5 xl:h-5" />
+                  <span>{user?.fullName}</span>
+                  <ChevronDown className={`w-3 h-3 xl:w-4 xl:h-4 transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showUserDropdown && (
+                  <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 min-w-48 z-50">
+                    <div className="py-2">
+                      <div className="px-4 py-2 text-sm text-gray-600 border-b border-gray-100">
+                        <div className="font-medium text-gray-900">{user?.fullName}</div>
+                        <div className="text-xs">{user?.email}</div>
+                      </div>
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2"
+                        onClick={() => {
+                          logout();
+                          setShowUserDropdown(false);
+                        }}
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button 
+                className="bg-blue-600 hover:bg-blue-700 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-sm xl:text-base transition-colors flex items-center space-x-2 font-medium"
+                onClick={() => setShowLoginDialog(true)}
+              >
+                <User className="w-4 h-4 xl:w-5 xl:h-5" />
+                <span>Đăng nhập</span>
+              </button>
+            )}
           </div>
         </div>
 
