@@ -214,7 +214,7 @@ const Home = () => {
       <section className="bg-gray-50 py-8 sm:py-12 lg:py-16">
         <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-12 max-w-7xl">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-8 lg:mb-12">
-            ĐẤU GIÁ <span className="text-yellow-500">NỔI BẬT</span>
+            ĐẤU GIÁ <span className="text-orange-600">NỔI BẬT</span>
           </h2>
           
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -257,7 +257,7 @@ const Home = () => {
               {/* Product Info Section */}
               <div className="p-6 lg:p-12 flex flex-col justify-center">
                 <div className="mb-4">
-                  <span className="bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-bold">NỔI BẬT</span>
+                  <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">NỔI BẬT</span>
                 </div>
                 
                 <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
@@ -284,7 +284,7 @@ const Home = () => {
                 
                 <button 
                   onClick={() => navigate('/auction/iphone-17-series')}
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 px-6 rounded-lg text-lg transition-colors duration-200"
+                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-bold py-4 px-6 rounded-lg text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
                   THAM GIA ĐẤU GIÁ
                 </button>
@@ -299,8 +299,8 @@ const Home = () => {
         {/* Auction Products Section */}
         <section className="mb-8 sm:mb-10 lg:mb-16">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 lg:mb-8">
-            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800 mb-3 sm:mb-0">
-              SẢN PHẨM ĐANG ĐẤU GIÁ
+            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mb-3 sm:mb-0 text-gray-800">
+              SẢN PHẨM <span className="text-yellow-600">ĐANG ĐẤU GIÁ</span>
             </h2>
             <button className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium">
               Xem tất cả
@@ -316,8 +316,8 @@ const Home = () => {
         {/* Upcoming Auctions Section */}
         <section className="mb-8 sm:mb-10 lg:mb-16">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 lg:mb-8">
-            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800 mb-3 sm:mb-0">
-              SẢN PHẨM SẮP ĐẤU GIÁ ({upcomingProducts.length})
+            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mb-3 sm:mb-0 text-gray-800">
+              SẢN PHẨM <span className="text-amber-600">SẮP ĐẤU GIÁ</span> ({upcomingProducts.length})
             </h2>
             <button className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium">
               Xem tất cả
@@ -333,8 +333,8 @@ const Home = () => {
         {/* Featured Products Section */}
         <section className="mb-8 sm:mb-10 lg:mb-16">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 lg:mb-8">
-            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800 mb-3 sm:mb-0">
-              SẢN PHẨM NỔI BẬT ({featuredProducts.length})
+            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mb-3 sm:mb-0 text-gray-800">
+              SẢN PHẨM <span className="text-orange-600">NỔI BẬT</span> ({featuredProducts.length})
             </h2>
             <button className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium">
               Xem tất cả

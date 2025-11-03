@@ -36,10 +36,9 @@ const ProductCard = ({ name, currentPrice, image }: ProductCardProps) => {
         <Button 
           variant="outline" 
           size="sm" 
-          className="w-full text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-xs sm:text-sm py-1.5 sm:py-2 px-2 sm:px-3 transition-all duration-200 font-medium rounded-md lg:rounded-lg flex items-center justify-center gap-2"
+          className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black border-none shadow-lg hover:shadow-xl text-xs sm:text-sm py-2 sm:py-2.5 px-3 sm:px-4 transition-all duration-300 font-semibold rounded-xl flex items-center justify-center transform hover:scale-[1.02] hover:-translate-y-0.5"
         >
-          <span className="text-lg">♡</span>
-          <span>Quan tâm</span>
+          Đặt giá tự động
         </Button>
       </div>
     </div>
