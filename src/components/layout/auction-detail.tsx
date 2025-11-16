@@ -64,6 +64,15 @@ const AuctionDetail = () => {
   const [userMaxBid, setUserMaxBid] = useState('32.000.000'); // Giá tối đa hiện tại của user
   const [isHighestBidder, setIsHighestBidder] = useState(true); // User có phải là người đấu giá cao nhất
   const [showBidConfirmation, setShowBidConfirmation] = useState(false);
+  const [reservePrice] = useState('25.000.000'); // Giá sàn cố định
+  const [isReserveMet, setIsReserveMet] = useState(false); // Trạng thái đạt giá sàn
+
+  // Kiểm tra xem đã đạt giá sàn chưa
+  useEffect(() => {
+    const current = parseFloat(currentPrice.replace(/\./g, ''));
+    const reserve = parseFloat(reservePrice.replace(/\./g, ''));
+    setIsReserveMet(current >= reserve);
+  }, [currentPrice, reservePrice]);
 
   // Format số tiền với dấu chấm phân cách
   const formatNumber = (value: string) => {
@@ -279,6 +288,23 @@ const AuctionDetail = () => {
                     <p className="text-sm text-gray-600 mt-2">
                       Khởi điểm: <span className="font-semibold">{startingPrice} VNĐ</span>
                     </p>
+                    
+                    {/* Trạng thái giá sàn */}
+                    <div className="mt-4">
+                      {isReserveMet ? (
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white px-6 py-3 rounded-2xl font-bold shadow-xl border border-emerald-400 hover:scale-105 transform transition-all duration-300">
+                          <span className="text-lg animate-pulse">✨</span>
+                          <span>Giá sàn đã đạt</span>
+                          
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-3 rounded-2xl font-bold shadow-xl border border-yellow-400 hover:scale-105 transform transition-all duration-300">
+                          <span className="text-lg animate-bounce">🔒</span>
+                          <span>Có giá sàn</span>
+                          <span className="text-lg">⚡</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   {/* Proxy Bidding Status */}

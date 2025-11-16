@@ -19,13 +19,13 @@ interface LoginDialogProps {
 
 export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialogProps) {
   const { login } = useAuth();
-  const [emailOrPhone, setEmailOrPhone] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  const [errors, setErrors] = useState({ emailOrPhone: '', password: '' });
+  const [errors, setErrors] = useState({ emailOrUsername: '', password: '' });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const firstInputRef = useRef<HTMLInputElement>(null);
   
@@ -40,30 +40,29 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
   }, [isOpen]);
 
   const handleClose = useCallback(() => {
-    setEmailOrPhone('');
+    setEmailOrUsername('');
     setPassword('');
-    setErrors({ emailOrPhone: '', password: '' });
+    setErrors({ emailOrUsername: '', password: '' });
     setShowForgotPassword(false);
     onClose();
   }, [onClose]);
 
   // Validation function
   const validateForm = () => {
-    const newErrors = { emailOrPhone: '', password: '' };
+    const newErrors = { emailOrUsername: '', password: '' };
     
-    if (!emailOrPhone.trim()) {
-      newErrors.emailOrPhone = 'Vui lòng nhập số điện thoại hoặc email';
-    } else if (emailOrPhone.includes('@')) {
+    if (!emailOrUsername.trim()) {
+      newErrors.emailOrUsername = 'Vui lòng nhập Tên người dùng hoặc Email';
+    } else if (emailOrUsername.includes('@')) {
       // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(emailOrPhone)) {
-        newErrors.emailOrPhone = 'Email không đúng định dạng';
+      if (!emailRegex.test(emailOrUsername)) {
+        newErrors.emailOrUsername = 'Email không đúng định dạng';
       }
     } else {
-      // Phone validation (Vietnam phone numbers)
-      const phoneRegex = /^(\+84|84|0)[1-9][0-9]{8,9}$/;
-      if (!phoneRegex.test(emailOrPhone)) {
-        newErrors.emailOrPhone = 'Số điện thoại không đúng định dạng';
+      // Username validation - simple alphanumeric and underscore
+      if (!/^[a-zA-Z0-9_]+$/.test(emailOrUsername)) {
+        newErrors.emailOrUsername = 'Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới';
       }
     }
     
@@ -74,7 +73,7 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
     }
     
     setErrors(newErrors);
-    return !newErrors.emailOrPhone && !newErrors.password;
+    return !newErrors.emailOrUsername && !newErrors.password;
   };
 
   // Handle ESC key
@@ -103,7 +102,7 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
     
     // Xử lý đăng nhập ở đây
     try {
-      await login(emailOrPhone, password);
+      await login(emailOrUsername, password);
       
       // Hiển thị toast thành công
       setToastMessage('Đăng nhập thành công!');
@@ -111,9 +110,9 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
       setShowToast(true);
 
       // Reset form
-      setEmailOrPhone('');
+      setEmailOrUsername('');
       setPassword('');
-      setErrors({ emailOrPhone: '', password: '' });
+      setErrors({ emailOrUsername: '', password: '' });
 
       // Đóng popup sau khi đăng nhập thành công
       setTimeout(() => {
@@ -165,22 +164,22 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
             <div>
               <Input
                 ref={firstInputRef}
-                id="emailOrPhone"
+                id="emailOrUsername"
                 type="text"
-                placeholder="Số điện thoại hoặc Email"
-                value={emailOrPhone}
-                onChange={(e) => setEmailOrPhone(e.target.value)}
+                placeholder="Tên người dùng hoặc Email"
+                value={emailOrUsername}
+                onChange={(e) => setEmailOrUsername(e.target.value)}
                 required
-                aria-label="Số điện thoại hoặc Email"
+                aria-label="Tên người dùng hoặc Email"
                 className={`w-full h-12 sm:h-14 px-4 sm:px-6 text-base sm:text-lg rounded-xl sm:rounded-2xl border-2 transition-all duration-200 ${
-                  errors.emailOrPhone 
+                  errors.emailOrUsername 
                     ? 'border-red-300 focus:border-red-500 bg-red-50' 
                     : 'border-gray-200 focus:border-blue-400 bg-white'
                 }`}
                 disabled={isLoading}
               />
-              {errors.emailOrPhone && (
-                <p className="text-red-500 text-sm sm:text-base mt-2 ml-2">{errors.emailOrPhone}</p>
+              {errors.emailOrUsername && (
+                <p className="text-red-500 text-sm sm:text-base mt-2 ml-2">{errors.emailOrUsername}</p>
               )}
             </div>
             

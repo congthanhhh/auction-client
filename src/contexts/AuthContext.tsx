@@ -1,16 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 
 interface User {
   id: string;
+  username: string;
   fullName: string;
   email: string;
-  phoneNumber: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (emailOrPhone: string, password: string) => Promise<boolean>;
+  login: (emailOrUsername: string, password: string) => Promise<boolean>;
   register: (userData: Omit<User, 'id'> & { password: string }) => Promise<boolean>;
   logout: () => void;
 }
@@ -54,24 +55,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Get existing users from localStorage
       const existingUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
       
-      // Check if email or phone already exists
-      const emailExists = existingUsers.some((u: any) => u.email === userData.email);
-      const phoneExists = existingUsers.some((u: any) => u.phoneNumber === userData.phoneNumber);
+      // Check if email or username already exists
+      const emailExists = existingUsers.some((u: User & { password: string }) => u.email === userData.email);
+      const usernameExists = existingUsers.some((u: User & { password: string }) => u.username === userData.username);
       
       if (emailExists) {
         throw new Error('Email đã được sử dụng');
       }
       
-      if (phoneExists) {
-        throw new Error('Số điện thoại đã được sử dụng');
+      if (usernameExists) {
+        throw new Error('Tên người dùng đã được sử dụng');
       }
 
       // Create new user
       const newUser = {
         id: Date.now().toString(),
+        username: userData.username,
         fullName: userData.fullName,
         email: userData.email,
-        phoneNumber: userData.phoneNumber,
         password: userData.password // In real app, this should be hashed
       };
 
@@ -86,7 +87,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (emailOrPhone: string, password: string): Promise<boolean> => {
+  const login = async (emailOrUsername: string, password: string): Promise<boolean> => {
     try {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -94,21 +95,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Get registered users from localStorage
       const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
       
-      // Find user by email or phone
-      const foundUser = registeredUsers.find((u: any) => 
-        (u.email === emailOrPhone || u.phoneNumber === emailOrPhone) && u.password === password
+      // Find user by email or username
+      const foundUser = registeredUsers.find((u: User & { password: string }) => 
+        (u.email === emailOrUsername || u.username === emailOrUsername) && u.password === password
       );
 
       if (!foundUser) {
-        throw new Error('Email/số điện thoại hoặc mật khẩu không đúng');
+        throw new Error('Email/Tên người dùng hoặc mật khẩu không đúng');
       }
 
       // Remove password from user object before setting state
-      const userWithoutPassword = {
+      const userWithoutPassword: User = {
         id: foundUser.id,
+        username: foundUser.username,
         fullName: foundUser.fullName,
-        email: foundUser.email,
-        phoneNumber: foundUser.phoneNumber
+        email: foundUser.email
       };
 
       setUser(userWithoutPassword);

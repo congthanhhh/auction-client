@@ -1,4 +1,4 @@
-import { Search, ShoppingCart, User, Menu, ChevronDown, LogOut } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, ChevronDown, LogOut, Bell } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { productService, type Product } from "../../services/productService";
@@ -271,9 +271,9 @@ const Header = () => {
             </button>
 
             <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
-              <span className="text-lg xl:text-xl">❤️</span>
+              <Bell className="w-5 h-5 xl:w-6 xl:h-6" />
               <span className="text-sm xl:text-base hidden xl:inline font-medium">
-                Quan tâm
+                Thông báo
               </span>
             </button>
 
@@ -336,7 +336,7 @@ const Header = () => {
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button className="text-white hover:text-gray-300 transition-colors">
-                <span className="text-base sm:text-lg">❤️</span>
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button 
                 className="bg-blue-600 hover:bg-blue-700 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors"
