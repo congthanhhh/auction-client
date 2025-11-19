@@ -1,13 +1,26 @@
 import { Search, ShoppingCart, User, Menu, ChevronDown, LogOut, Bell } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { productService, type Product } from "../../services/productService";
+import dbData from '../../../db.json';
 import LoginDialog from "../pop-up/login";
 import RegisterDialog from "../pop-up/register";
-import { useAuth } from "../../contexts/AuthContext";
+
+export interface Product {
+  id: string;
+  name: string;
+  currentPrice: string;
+  image: string;
+  status: 'active' | 'upcoming' | 'featured';
+  description?: string;
+  endTime?: string;
+  startingPrice?: string;
+  startTime?: string;
+}
 
 const Header = () => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const user: { fullName?: string; email?: string } | null = null;
+  const isAuthenticated = false;
+  const logout = () => { };
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -16,7 +29,7 @@ const Header = () => {
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  
+
   // Autocomplete states
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -24,9 +37,9 @@ const Header = () => {
   const [showMobileSuggestions, setShowMobileSuggestions] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const [mobileActiveSuggestionIndex, setMobileActiveSuggestionIndex] = useState(-1);
-  
+
   const navigate = useNavigate();
-  
+
   const desktopDropdownRef = useRef<HTMLDivElement>(null);
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
   const desktopSearchRef = useRef<HTMLDivElement>(null);
@@ -63,9 +76,16 @@ const Header = () => {
 
   // Fetch suggestions for desktop search
   useEffect(() => {
-    const fetchSuggestions = async () => {
+    const fetchSuggestions = () => {
       if (searchQuery.length >= 1) {
-        const results = await productService.getSuggestions(searchQuery);
+        const allProducts = [
+          ...dbData.activeProducts,
+          ...dbData.upcomingProducts,
+          ...dbData.featuredProducts
+        ] as Product[];
+        const results = allProducts
+          .filter(product => product.name.toLowerCase().includes(searchQuery.toLowerCase()))
+          .slice(0, 5);
         setSuggestions(results);
         setShowSuggestions(true);
         setActiveSuggestionIndex(-1);
@@ -81,9 +101,16 @@ const Header = () => {
 
   // Fetch suggestions for mobile search
   useEffect(() => {
-    const fetchSuggestions = async () => {
+    const fetchSuggestions = () => {
       if (mobileSearchQuery.length >= 1) {
-        const results = await productService.getSuggestions(mobileSearchQuery);
+        const allProducts = [
+          ...dbData.activeProducts,
+          ...dbData.upcomingProducts,
+          ...dbData.featuredProducts
+        ] as Product[];
+        const results = allProducts
+          .filter(product => product.name.toLowerCase().includes(mobileSearchQuery.toLowerCase()))
+          .slice(0, 5);
         setMobileSuggestions(results);
         setShowMobileSuggestions(true);
         setMobileActiveSuggestionIndex(-1);
@@ -126,7 +153,7 @@ const Header = () => {
       }
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveSuggestionIndex(prev => 
+      setActiveSuggestionIndex(prev =>
         prev < suggestions.length - 1 ? prev + 1 : prev
       );
     } else if (e.key === "ArrowUp") {
@@ -147,7 +174,7 @@ const Header = () => {
       }
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      setMobileActiveSuggestionIndex(prev => 
+      setMobileActiveSuggestionIndex(prev =>
         prev < mobileSuggestions.length - 1 ? prev + 1 : prev
       );
     } else if (e.key === "ArrowUp") {
@@ -175,21 +202,21 @@ const Header = () => {
 
             {/* Category Dropdown */}
             <div className="relative" ref={desktopDropdownRef}>
-              <button 
+              <button
                 onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
                 className="bg-white text-black px-3 py-2 xl:px-4 xl:py-2.5 rounded-xl text-sm xl:text-base w-28 xl:w-32 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between hover:bg-gray-100 transition-colors"
               >
                 <span className="truncate">Danh mục</span>
                 <ChevronDown className="w-4 h-4 xl:w-5 xl:h-5 flex-shrink-0" />
               </button>
-              
+
               {showCategoryDropdown && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[110] w-36 xl:w-40 2xl:w-44">
                   <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors rounded-t-lg">
                     Điện thoại
                   </button>
                   <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors">
-                    Laptop  
+                    Laptop
                   </button>
                   <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors">
                     Tablet
@@ -233,9 +260,8 @@ const Header = () => {
                   <div
                     key={product.id}
                     onClick={() => handleSuggestionClick(product.name)}
-                    className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
-                      index === activeSuggestionIndex ? 'bg-blue-50' : ''
-                    }`}
+                    className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${index === activeSuggestionIndex ? 'bg-blue-50' : ''
+                      }`}
                   >
                     <div className="flex items-center space-x-3">
                       <img
@@ -279,7 +305,7 @@ const Header = () => {
 
             {isAuthenticated ? (
               <div className="relative" ref={userDropdownRef}>
-                <button 
+                <button
                   className="bg-green-600 hover:bg-green-700 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-sm xl:text-base transition-colors flex items-center space-x-2 font-medium"
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                 >
@@ -310,7 +336,7 @@ const Header = () => {
                 )}
               </div>
             ) : (
-              <button 
+              <button
                 className="bg-blue-600 hover:bg-blue-700 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-sm xl:text-base transition-colors flex items-center space-x-2 font-medium"
                 onClick={() => setShowLoginDialog(true)}
               >
@@ -338,7 +364,7 @@ const Header = () => {
               <button className="text-white hover:text-gray-300 transition-colors">
                 <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <button 
+              <button
                 className="bg-blue-600 hover:bg-blue-700 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors"
                 onClick={() => setShowLoginDialog(true)}
               >
@@ -356,14 +382,14 @@ const Header = () => {
           {/* Mobile Search */}
           <div className="flex space-x-2">
             <div className="relative" ref={mobileDropdownRef}>
-              <button 
+              <button
                 onClick={() => setShowMobileCategoryDropdown(!showMobileCategoryDropdown)}
                 className="bg-white text-black px-1.5 sm:px-2 py-1.5 sm:py-2 rounded text-xs sm:text-sm flex-shrink-0 w-20 sm:w-24 flex items-center justify-between hover:bg-gray-100 transition-colors"
               >
                 <span>Danh mục</span>
                 <ChevronDown className="w-2 h-2 sm:w-3 sm:h-3" />
               </button>
-              
+
               {showMobileCategoryDropdown && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[110] w-28 sm:w-32">
                   <button className="w-full text-left px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-black hover:bg-gray-100 transition-colors rounded-t-lg">
@@ -410,9 +436,8 @@ const Header = () => {
                     <div
                       key={product.id}
                       onClick={() => handleSuggestionClick(product.name, true)}
-                      className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
-                        index === mobileActiveSuggestionIndex ? 'bg-blue-50' : ''
-                      }`}
+                      className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${index === mobileActiveSuggestionIndex ? 'bg-blue-50' : ''
+                        }`}
                     >
                       <div className="flex items-center space-x-2">
                         <img
@@ -457,10 +482,10 @@ const Header = () => {
           )}
         </div>
       </div>
-      
+
       {/* Login Dialog */}
-      <LoginDialog 
-        isOpen={showLoginDialog} 
+      <LoginDialog
+        isOpen={showLoginDialog}
         onClose={() => setShowLoginDialog(false)}
         onSwitchToRegister={() => {
           console.log('Header: Switching from Login to Register'); // Debug log
@@ -468,10 +493,10 @@ const Header = () => {
           setShowRegisterDialog(true);
         }}
       />
-      
+
       {/* Register Dialog */}
-      <RegisterDialog 
-        isOpen={showRegisterDialog} 
+      <RegisterDialog
+        isOpen={showRegisterDialog}
         onClose={() => setShowRegisterDialog(false)}
         onSwitchToLogin={() => {
           console.log('Header: Switching from Register to Login'); // Debug log

@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle
 } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Toast } from '../ui/toast';
-import { useAuth } from '../../contexts/AuthContext';
 import ForgotPassword from './forgot-password';
 
 interface LoginDialogProps {
@@ -18,7 +17,11 @@ interface LoginDialogProps {
 }
 
 export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialogProps) {
-  const { login } = useAuth();
+  const login = async (emailOrUsername: string, password: string) => {
+    // Login logic removed - UI only
+    console.log('Login:', emailOrUsername, password);
+    return true;
+  };
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +31,7 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
   const [errors, setErrors] = useState({ emailOrUsername: '', password: '' });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const firstInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Focus first input when dialog opens
   useEffect(() => {
     if (isOpen && firstInputRef.current) {
@@ -50,7 +53,7 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
   // Validation function
   const validateForm = () => {
     const newErrors = { emailOrUsername: '', password: '' };
-    
+
     if (!emailOrUsername.trim()) {
       newErrors.emailOrUsername = 'Vui lòng nhập Tên người dùng hoặc Email';
     } else if (emailOrUsername.includes('@')) {
@@ -65,13 +68,13 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
         newErrors.emailOrUsername = 'Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới';
       }
     }
-    
+
     if (!password.trim()) {
       newErrors.password = 'Vui lòng nhập mật khẩu';
     } else if (password.length < 6) {
       newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
     }
-    
+
     setErrors(newErrors);
     return !newErrors.emailOrUsername && !newErrors.password;
   };
@@ -92,18 +95,18 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form before submission
     if (!validateForm()) {
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     // Xử lý đăng nhập ở đây
     try {
       await login(emailOrUsername, password);
-      
+
       // Hiển thị toast thành công
       setToastMessage('Đăng nhập thành công!');
       setToastType('success');
@@ -122,7 +125,7 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
     } catch (error: unknown) {
       console.error('Lỗi đăng nhập:', error);
       const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
-      
+
       setToastMessage(errorMessage);
       setToastType('error');
       setShowToast(true);
@@ -143,12 +146,12 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
   };
 
   return (
-    <Dialog 
-      open={isOpen} 
+    <Dialog
+      open={isOpen}
       onOpenChange={handleClose}
       modal={true}
     >
-      <DialogContent 
+      <DialogContent
         className="w-[95vw] max-w-md sm:max-w-lg mx-auto p-0 rounded-2xl sm:rounded-3xl animate-in fade-in-0 zoom-in-95 duration-200 overflow-hidden bg-gradient-to-br from-blue-50 to-white border-0 shadow-2xl max-h-[95vh] overflow-y-auto"
         onPointerDownOutside={() => handleClose()}
         onEscapeKeyDown={() => handleClose()}
@@ -158,7 +161,7 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
             Đăng nhập
           </DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleLogin} className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 space-y-6 sm:space-y-8">
           <div className="space-y-4 sm:space-y-6">
             <div>
@@ -171,18 +174,17 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
                 onChange={(e) => setEmailOrUsername(e.target.value)}
                 required
                 aria-label="Tên người dùng hoặc Email"
-                className={`w-full h-12 sm:h-14 px-4 sm:px-6 text-base sm:text-lg rounded-xl sm:rounded-2xl border-2 transition-all duration-200 ${
-                  errors.emailOrUsername 
-                    ? 'border-red-300 focus:border-red-500 bg-red-50' 
+                className={`w-full h-12 sm:h-14 px-4 sm:px-6 text-base sm:text-lg rounded-xl sm:rounded-2xl border-2 transition-all duration-200 ${errors.emailOrUsername
+                    ? 'border-red-300 focus:border-red-500 bg-red-50'
                     : 'border-gray-200 focus:border-blue-400 bg-white'
-                }`}
+                  }`}
                 disabled={isLoading}
               />
               {errors.emailOrUsername && (
                 <p className="text-red-500 text-sm sm:text-base mt-2 ml-2">{errors.emailOrUsername}</p>
               )}
             </div>
-            
+
             <div>
               <Input
                 id="password"
@@ -192,25 +194,24 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 aria-label="Mật khẩu"
-                className={`w-full h-12 px-4 bg-gray-100 border-0 rounded-full text-gray-700 placeholder:text-gray-500 focus:ring-2 transition-all ${
-                  errors.password ? 'focus:ring-red-500 bg-red-50' : 'focus:ring-blue-500'
-                }`}
+                className={`w-full h-12 px-4 bg-gray-100 border-0 rounded-full text-gray-700 placeholder:text-gray-500 focus:ring-2 transition-all ${errors.password ? 'focus:ring-red-500 bg-red-50' : 'focus:ring-blue-500'
+                  }`}
               />
               {errors.password && (
                 <p className="text-red-500 text-sm mt-1 ml-4">{errors.password}</p>
               )}
             </div>
           </div>
-          
+
           <div className="space-y-4">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full h-12 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-full font-semibold text-base transition-all duration-200"
               disabled={isLoading}
             >
               {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Button>
-            
+
             <div className="text-center space-y-2">
               <p className="text-gray-600 text-sm">
                 Bạn chưa có tài khoản?{' '}
@@ -222,7 +223,7 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
                   Đăng ký ngay!
                 </button>
               </p>
-              
+
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(true)}
@@ -234,9 +235,9 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
           </div>
         </form>
       </DialogContent>
-      
+
       {/* Toast notification */}
-      <Toast 
+      <Toast
         message={toastMessage}
         type={toastType}
         isVisible={showToast}

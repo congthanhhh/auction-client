@@ -15,8 +15,19 @@ import Autoplay from "embla-carousel-autoplay";
 import imgBanner1 from '../../assets/imgbaner1.jpg';
 import imgBanner2 from '../../assets/imgbaner2.webp';
 import imgBanner3 from '../../assets/imgbaner3.webp';
-import type { Product } from '../../services/productService';
-import { productService } from '../../services/productService';
+import dbData from '../../../db.json';
+
+export interface Product {
+  id: string;
+  name: string;
+  currentPrice: string;
+  image: string;
+  status: 'active' | 'upcoming' | 'featured';
+  description?: string;
+  endTime?: string;
+  startingPrice?: string;
+  startTime?: string;
+}
 
 // Scroll to Top Component
 const ScrollToTop = () => {
@@ -109,28 +120,22 @@ const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch data from API
+  // Load data from db.json
   useEffect(() => {
-    const fetchAllProducts = async () => {
+    const loadProducts = () => {
       setLoading(true);
       try {
-        const [activeData, upcomingData, featuredData] = await Promise.all([
-          productService.getActiveAuctionProducts(),
-          productService.getUpcomingAuctionProducts(),
-          productService.getFeaturedProducts()
-        ]);
-
-        setActiveProducts(activeData);
-        setUpcomingProducts(upcomingData);
-        setFeaturedProducts(featuredData);
+        setActiveProducts(dbData.activeProducts as Product[]);
+        setUpcomingProducts(dbData.upcomingProducts as Product[]);
+        setFeaturedProducts(dbData.featuredProducts as Product[]);
       } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error('Error loading products:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAllProducts();
+    loadProducts();
   }, []);
 
   // Banner data
@@ -179,11 +184,11 @@ const Home = () => {
   return (
     <div className="min-h-screen relative">
       <Header />
-      
+
       {/* Hero Banner */}
       <section className="bg-gray-200 py-3 xs:py-4 sm:py-6 md:py-8 lg:py-10 xl:py-12 w-full" style={{ marginTop: '80px' }}>
         <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-12 max-w-7xl">
-          <Carousel 
+          <Carousel
             className="w-full max-w-7xl mx-auto"
             plugins={[
               Autoplay({
@@ -195,8 +200,8 @@ const Home = () => {
               {bannerData.map((banner) => (
                 <CarouselItem key={banner.id}>
                   <div className="relative bg-white rounded-lg lg:rounded-xl overflow-hidden shadow-sm">
-                    <img 
-                      src={banner.image} 
+                    <img
+                      src={banner.image}
                       alt={banner.title}
                       className="w-full h-36 xs:h-44 sm:h-56 md:h-72 lg:h-80 xl:h-96 object-cover"
                     />
@@ -216,7 +221,7 @@ const Home = () => {
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-8 lg:mb-12">
             ĐẤU GIÁ <span className="text-orange-600">NỔI BẬT</span>
           </h2>
-          
+
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div className="grid md:grid-cols-2 gap-0">
               {/* Product Image Section */}
@@ -236,7 +241,7 @@ const Home = () => {
                       <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-gray-400 rounded-full opacity-30"></div>
                     </div>
                   </div>
-                  
+
                   {/* Orange iPhone */}
                   <div className="transform rotate-12 hover:rotate-0 transition-transform duration-300">
                     <div className="w-32 h-56 lg:w-40 lg:h-72 bg-gradient-to-b from-orange-400 to-orange-600 rounded-3xl relative shadow-2xl">
@@ -259,15 +264,15 @@ const Home = () => {
                 <div className="mb-4">
                   <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">NỔI BẬT</span>
                 </div>
-                
+
                 <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
                   iPhone 17 series
                 </h3>
-                
+
                 <p className="text-gray-600 mb-6 leading-relaxed">
                   iPhone 17 Pro và iPhone 17 Pro Max được thiết kế từ trong ra ngoài để trở thành những phiên bản iPhone mạnh mẽ nhất. Cốt lõi của thiết kế mới là vỏ máy nguyên khối nhôm rèn nhịt tăng tối đa độ bền bỉ, hiệu năng và dung lượng pin.
                 </p>
-                
+
                 {/* Price and Timer in one container */}
                 <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
                   {/* Price Section */}
@@ -275,14 +280,14 @@ const Home = () => {
                     <p className="text-gray-600 text-sm mb-1">Giá đấu hiện tại</p>
                     <p className="text-3xl font-bold text-blue-600">19.999.999 VNĐ</p>
                   </div>
-                  
+
                   {/* Countdown Timer */}
                   <div className="lg:flex-shrink-0">
                     <CountdownTimer endTime={new Date(Date.now() + 23 * 60 * 60 * 1000 + 12 * 60 * 1000 + 59 * 1000)} />
                   </div>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={() => navigate('/auction/iphone-17-series')}
                   className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-bold py-4 px-6 rounded-lg text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
@@ -349,7 +354,7 @@ const Home = () => {
       </main>
 
       <Footer />
-      
+
       {/* Scroll to Top Button */}
       <ScrollToTop />
     </div>

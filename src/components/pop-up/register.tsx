@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle
 } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Toast } from '../ui/toast';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface RegisterDialogProps {
   isOpen: boolean;
@@ -19,7 +18,11 @@ interface RegisterDialogProps {
 type RegisterStep = 'form' | 'otp';
 
 export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDialogProps) {
-  const { register } = useAuth();
+  const register = async (userData: { username: string; fullName: string; email: string; password: string }) => {
+    // Register logic removed - UI only
+    console.log('Register:', userData);
+    return true;
+  };
   const [step, setStep] = useState<RegisterStep>('form');
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
@@ -85,7 +88,7 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
       password: '',
       confirmPassword: ''
     };
-    
+
     // Username validation
     if (!username.trim()) {
       newErrors.username = 'Vui lòng nhập tên người dùng';
@@ -94,14 +97,14 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
     } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       newErrors.username = 'Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới';
     }
-    
+
     // Full name validation
     if (!fullName.trim()) {
       newErrors.fullName = 'Vui lòng nhập họ và tên';
     } else if (fullName.trim().length < 2) {
       newErrors.fullName = 'Họ và tên phải có ít nhất 2 ký tự';
     }
-    
+
     // Email validation
     if (!email.trim()) {
       newErrors.email = 'Vui lòng nhập email';
@@ -111,46 +114,46 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
         newErrors.email = 'Email không đúng định dạng';
       }
     }
-    
+
     // Password validation
     if (!password.trim()) {
       newErrors.password = 'Vui lòng nhập mật khẩu';
     } else if (password.length < 6) {
       newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
     }
-    
+
     // Confirm password validation
     if (!confirmPassword.trim()) {
       newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
     } else if (confirmPassword !== password) {
       newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
     }
-    
+
     setErrors(newErrors);
     return !Object.values(newErrors).some(error => error !== '');
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Simulate API call to send OTP
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Move to OTP step
       setStep('otp');
-      
+
       // Show success toast
       setToastMessage('Mã OTP đã được gửi đến email của bạn!');
       setToastType('success');
       setShowToast(true);
-      
+
       console.log('OTP sent to:', email);
     } catch {
       setToastMessage('Có lỗi xảy ra khi gửi mã OTP');
@@ -165,7 +168,7 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) return;
     if (value && !/^\d$/.test(value)) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -186,7 +189,7 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const otpCode = otp.join('');
-    
+
     if (otpCode.length !== 5) {
       setToastMessage('Vui lòng nhập đầy đủ mã OTP');
       setToastType('error');
@@ -199,7 +202,7 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
     try {
       // Simulate OTP verification (in real app, verify OTP first)
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // If OTP is correct, proceed with registration
       await register({
         username,
@@ -207,7 +210,7 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
         email,
         password
       });
-      
+
       // Success - show message and close
       setToastMessage('Chúc mừng bạn đã đăng ký thành công!');
       setToastType('success');
@@ -223,7 +226,7 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
     } catch (error: unknown) {
       console.error('Lỗi xác thực OTP hoặc đăng ký:', error);
       const errorMessage = error instanceof Error ? error.message : 'Xác thực thất bại. Vui lòng thử lại.';
-      
+
       setToastMessage(errorMessage);
       setToastType('error');
       setShowToast(true);
@@ -254,11 +257,10 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
             onChange={(e) => setUsername(e.target.value)}
             required
             aria-label="Tên người dùng"
-            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${
-              errors.username 
-                ? 'border-red-300 focus:border-red-500 bg-red-50' 
+            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${errors.username
+                ? 'border-red-300 focus:border-red-500 bg-red-50'
                 : 'border-gray-200 focus:border-green-400 bg-white'
-            }`}
+              }`}
             disabled={isLoading}
           />
           {errors.username && (
@@ -276,11 +278,10 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
             onChange={(e) => setFullName(e.target.value)}
             required
             aria-label="Họ và tên"
-            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${
-              errors.fullName 
-                ? 'border-red-300 focus:border-red-500 bg-red-50' 
+            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${errors.fullName
+                ? 'border-red-300 focus:border-red-500 bg-red-50'
                 : 'border-gray-200 focus:border-green-400 bg-white'
-            }`}
+              }`}
             disabled={isLoading}
           />
           {errors.fullName && (
@@ -298,11 +299,10 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
             onChange={(e) => setEmail(e.target.value)}
             required
             aria-label="Email"
-            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${
-              errors.email 
-                ? 'border-red-300 focus:border-red-500 bg-red-50' 
+            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${errors.email
+                ? 'border-red-300 focus:border-red-500 bg-red-50'
                 : 'border-gray-200 focus:border-green-400 bg-white'
-            }`}
+              }`}
             disabled={isLoading}
           />
           {errors.email && (
@@ -320,11 +320,10 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
             onChange={(e) => setPassword(e.target.value)}
             required
             aria-label="Mật khẩu"
-            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${
-              errors.password 
-                ? 'border-red-300 focus:border-red-500 bg-red-50' 
+            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${errors.password
+                ? 'border-red-300 focus:border-red-500 bg-red-50'
                 : 'border-gray-200 focus:border-green-400 bg-white'
-            }`}
+              }`}
             disabled={isLoading}
           />
           {errors.password && (
@@ -342,11 +341,10 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
             aria-label="Xác nhận mật khẩu"
-            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${
-              errors.confirmPassword 
-                ? 'border-red-300 focus:border-red-500 bg-red-50' 
+            className={`w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${errors.confirmPassword
+                ? 'border-red-300 focus:border-red-500 bg-red-50'
                 : 'border-gray-200 focus:border-green-400 bg-white'
-            }`}
+              }`}
             disabled={isLoading}
           />
           {errors.confirmPassword && (
@@ -363,7 +361,7 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
         >
           {isLoading ? 'Đang gửi OTP...' : 'Tiếp tục'}
         </Button>
-        
+
         <div className="text-center">
           <span className="text-xs sm:text-sm text-gray-600">
             Đã có tài khoản?{" "}
@@ -428,12 +426,12 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
   );
 
   return (
-    <Dialog 
-      open={isOpen} 
+    <Dialog
+      open={isOpen}
       onOpenChange={handleClose}
       modal={true}
     >
-      <DialogContent 
+      <DialogContent
         className="w-[95vw] max-w-md mx-auto p-0 rounded-2xl sm:rounded-3xl animate-in fade-in-0 zoom-in-95 duration-200 overflow-hidden bg-gradient-to-br from-green-50 to-white border-0 shadow-2xl"
         onPointerDownOutside={() => handleClose()}
         onEscapeKeyDown={() => handleClose()}
@@ -443,12 +441,12 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
             {step === 'form' ? 'Đăng ký' : ''}
           </DialogTitle>
         </DialogHeader>
-        
+
         {step === 'form' ? renderFormStep() : renderOtpStep()}
       </DialogContent>
 
       {/* Toast notification */}
-      <Toast 
+      <Toast
         isVisible={showToast}
         onClose={() => setShowToast(false)}
         type={toastType}
