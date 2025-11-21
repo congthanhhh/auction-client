@@ -11,7 +11,15 @@ export interface BidResponse {
     auctionSessionId: number;
 }
 
+export interface AuctionSessionDetail {
+    id: number;
+    currentPrice: number;
+    reservePriceMet: boolean; // <--- Thay reservePrice bằng cái này
+    highestBidder: { username: string } | null;
+}
+
 export interface PriceUpdatePayload {
     currentPrice: number;
     highestBidder: SimpleUserResponse | null;
+    reservePriceMet: boolean;
 }

@@ -121,21 +121,6 @@ const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Hàm test gọi API
-  const handleTestApi = async () => {
-    console.log("--- BẮT ĐẦU TEST ---");
-    try {
-      // Gọi thử API lấy thông tin User (Cần token)
-      // Nếu token ở LocalStorage hết hạn -> API này trả 401 -> Interceptor sẽ nhảy vào
-      const res = await authService.getMyInfo();
-      console.log("Kết quả thành công:", res.data);
-      alert("Gọi API thành công! Token còn sống hoặc đã được Refresh.");
-    } catch (error) {
-      console.error("Gọi API thất bại:", error);
-      alert("Gọi API thất bại. Kiểm tra Console.");
-    }
-  };
-
   // Load data from db.json
   useEffect(() => {
     const loadProducts = () => {
@@ -200,16 +185,6 @@ const Home = () => {
   return (
     <div className="pt-6">
       <Header />
-      <div style={{ padding: 20 }}>
-        <h1>Test Refresh Token</h1>
-        <button
-          onClick={handleTestApi}
-          style={{ padding: '10px 20px', backgroundColor: 'blue', color: 'white' }}
-        >
-          GỌI API (TEST)
-        </button>
-      </div>
-
       {/* Hero Banner */}
       <section className="bg-gray-200 py-3 xs:py-4 sm:py-6 md:py-8 lg:py-10 xl:py-12 w-full" style={{ marginTop: '80px' }}>
         <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-12 max-w-7xl">
