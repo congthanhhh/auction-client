@@ -6,10 +6,13 @@ import AuctionDetail from './components/layout/auction-detail'
 import { Toaster } from 'sonner'
 import { useAuthStore } from './stores/useAuthStore'
 import { useEffect } from 'react'
+import { useNotificationStore } from './stores/useNotificationStore.js'
+import AuctionDetailPage from './components/testUI/AuctionDetailPage.js'
 
 function App() {
 
   const { accessToken, fetchCurrentUser } = useAuthStore();
+  const { connectGlobalSocket, disconnectGlobalSocket, fetchNotifications } = useNotificationStore();
 
   // --- LOGIC TỰ ĐỘNG (Thay thế nút bấm thủ công) ---
   useEffect(() => {
@@ -25,6 +28,18 @@ function App() {
     }
   }, [fetchCurrentUser, accessToken]);
   // ------------------------------------------------
+  useEffect(() => {
+    if (accessToken) {
+      connectGlobalSocket();
+      fetchNotifications();
+    } else {
+      disconnectGlobalSocket();
+    }
+    // Cleanup khi unmount
+    return () => {
+      disconnectGlobalSocket();
+    };
+  }, [accessToken]);
 
   return (
     <Router>
@@ -33,6 +48,8 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<SearchResults />} />
         <Route path="/auction/:id" element={<AuctionDetail />} />
+        {/* router test */}
+        <Route path="/auction-test/:auctionId" element={<AuctionDetailPage />} />
       </Routes>
     </Router>
   )

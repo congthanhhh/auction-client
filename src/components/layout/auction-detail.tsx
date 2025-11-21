@@ -1,36 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from './page-layout';
 
-// Countdown Timer Component (reuse from Home)
-const CountdownTimer = ({ endTime }: { endTime: Date }) => {
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 0,
-    minutes: 0,
-    seconds: 0
-  });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const end = endTime.getTime();
-      const difference = end - now;
-
-      if (difference > 0) {
-        setTimeLeft({
-          hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((difference % (1000 * 60)) / 1000)
-        });
-      } else {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [endTime]);
-
+// Countdown Timer Component (Static for now)
+const CountdownTimer = () => {
   return (
     <div className="text-center">
       <p className="text-sm font-semibold text-yellow-700 mb-3 flex items-center justify-center gap-2">
@@ -39,15 +13,15 @@ const CountdownTimer = ({ endTime }: { endTime: Date }) => {
       </p>
       <div className="flex gap-3 justify-center">
         <div className="bg-white border-2 border-yellow-300 rounded-xl px-4 py-3 min-w-[60px] shadow-lg">
-          <div className="text-2xl font-black text-gray-900">{String(timeLeft.hours).padStart(2, '0')}</div>
+          <div className="text-2xl font-black text-gray-900">23</div>
           <div className="text-xs font-medium text-yellow-600 uppercase">Giờ</div>
         </div>
         <div className="bg-white border-2 border-yellow-300 rounded-xl px-4 py-3 min-w-[60px] shadow-lg">
-          <div className="text-2xl font-black text-gray-900">{String(timeLeft.minutes).padStart(2, '0')}</div>
+          <div className="text-2xl font-black text-gray-900">12</div>
           <div className="text-xs font-medium text-yellow-600 uppercase">Phút</div>
         </div>
         <div className="bg-white border-2 border-yellow-300 rounded-xl px-4 py-3 min-w-[60px] shadow-lg">
-          <div className="text-2xl font-black text-gray-900">{String(timeLeft.seconds).padStart(2, '0')}</div>
+          <div className="text-2xl font-black text-gray-900">59</div>
           <div className="text-xs font-medium text-yellow-600 uppercase">Giây</div>
         </div>
       </div>
@@ -58,117 +32,28 @@ const CountdownTimer = ({ endTime }: { endTime: Date }) => {
 const AuctionDetail = () => {
   const navigate = useNavigate();
   const [maxBidAmount, setMaxBidAmount] = useState('');
-  const [currentPrice] = useState('28.898.989');
-  const [startingPrice] = useState('19.999.999');
-  const [nextBidIncrement] = useState('100.000');
-  const [userMaxBid, setUserMaxBid] = useState('32.000.000'); // Giá tối đa hiện tại của user
-  const [isHighestBidder, setIsHighestBidder] = useState(true); // User có phải là người đấu giá cao nhất
-  const [showBidConfirmation, setShowBidConfirmation] = useState(false);
-  const [reservePrice] = useState('25.000.000'); // Giá sàn cố định
-  const [isReserveMet, setIsReserveMet] = useState(false); // Trạng thái đạt giá sàn
-
-  // Kiểm tra xem đã đạt giá sàn chưa
-  useEffect(() => {
-    const current = parseFloat(currentPrice.replace(/\./g, ''));
-    const reserve = parseFloat(reservePrice.replace(/\./g, ''));
-    setIsReserveMet(current >= reserve);
-  }, [currentPrice, reservePrice]);
-
-  // Format số tiền với dấu chấm phân cách
-  const formatNumber = (value: string) => {
-    // Loại bỏ tất cả ký tự không phải số
-    const numericValue = value.replace(/\D/g, '');
-    
-    // Thêm dấu chấm phân cách hàng nghìn
-    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  };
-
-  // Tạo gợi ý số tiền dựa trên input
-  const generateSuggestions = (input: string) => {
-    const numericValue = input.replace(/\D/g, '');
-    if (!numericValue || numericValue.length === 0) return [];
-
-    const baseNumber = parseInt(numericValue);
-    if (isNaN(baseNumber)) return [];
-
-    const suggestions = [];
-    
-    // Nếu chỉ nhập 1 số (ví dụ: 8)
-    if (numericValue.length === 1) {
-      suggestions.push(baseNumber * 10000);      // 80.000
-      suggestions.push(baseNumber * 100000);     // 800.000  
-      suggestions.push(baseNumber * 1000000);    // 8.000.000
-      suggestions.push(baseNumber * 10000000);   // 80.000.000
-    }
-    // Nếu nhập 2 số (ví dụ: 25)
-    else if (numericValue.length === 2) {
-      suggestions.push(baseNumber * 1000);       // 25.000
-      suggestions.push(baseNumber * 10000);      // 250.000
-      suggestions.push(baseNumber * 100000);     // 2.500.000
-      suggestions.push(baseNumber * 1000000);    // 25.000.000
-    }
-    // Nếu nhập 3 số trở lên
-    else {
-      const currentValue = parseInt(numericValue);
-      suggestions.push(currentValue * 10);       // x10
-      suggestions.push(currentValue * 100);      // x100
-      suggestions.push(currentValue * 1000);     // x1000
-    }
-
-    // Lọc các gợi ý hợp lý (lớn hơn giá hiện tại)
-    const currentPriceValue = parseFloat(currentPrice.replace(/\./g, ''));
-    return suggestions
-      .filter(val => val > currentPriceValue && val <= 999999999) // Giới hạn tối đa
-      .slice(0, 4) // Chỉ lấy 4 gợi ý
-      .map(val => formatNumber(val.toString()));
-  };
-
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showProxyBiddingInfo, setShowProxyBiddingInfo] = useState(false);
 
-  // Xử lý khi người dùng nhập giá
-  const handleMaxBidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    const formattedValue = formatNumber(inputValue);
-    setMaxBidAmount(formattedValue);
-    
-    // Cập nhật gợi ý chỉ khi có input và input không quá dài
-    if (inputValue.replace(/\D/g, '').length > 0 && inputValue.replace(/\D/g, '').length <= 3) {
-      const newSuggestions = generateSuggestions(inputValue);
-      setSuggestions(newSuggestions);
-    } else {
-      setSuggestions([]);
-    }
-  };
-
-  // Xử lý khi chọn gợi ý
-  const handleSuggestionClick = (suggestion: string) => {
-    setMaxBidAmount(suggestion);
-    setSuggestions([]); // Ẩn gợi ý sau khi chọn
-  };
+  // Static data for display
+  const currentPrice = '28.898.989';
+  const startingPrice = '19.999.999';
+  const nextBidIncrement = '100.000';
+  const userMaxBid = '32.000.000';
+  const isHighestBidder = true;
+  const isReserveMet = true;
 
   const handleGoBack = () => {
-    navigate('/'); // Navigate back to home page
+    navigate('/');
   };
 
   const handleMaxBidSubmit = () => {
-    if (maxBidAmount) {
-      const bidValue = parseFloat(maxBidAmount.replace(/\./g, ''));
-      const currentValue = parseFloat(currentPrice.replace(/\./g, ''));
-      
-      if (bidValue <= currentValue) {
-        alert('Giá tối đa phải cao hơn giá hiện tại!');
-        return;
-      }
-      
-      setUserMaxBid(maxBidAmount);
-      setIsHighestBidder(true);
-      setShowBidConfirmation(true);
-      console.log('Đặt giá tối đa:', maxBidAmount);
-      
-      // Ẩn thông báo sau 3 giây
-      setTimeout(() => setShowBidConfirmation(false), 3000);
+    if (!maxBidAmount) {
+      alert('Vui lòng nhập giá tối đa!');
+      return;
     }
+
+    alert('Đặt giá tối đa: ' + maxBidAmount + ' VNĐ');
+    console.log('Đặt giá tối đa:', maxBidAmount);
   };
 
   return (
@@ -194,7 +79,7 @@ const AuctionDetail = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent"></div>
               <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-yellow-500/5 rounded-full blur-2xl"></div>
-              
+
               <div className="flex gap-4 lg:gap-6 relative z-10">
                 {/* Gray iPhone */}
                 <div className="transform -rotate-12 hover:rotate-0 hover:scale-105 transition-all duration-500 cursor-pointer">
@@ -210,7 +95,7 @@ const AuctionDetail = () => {
                     <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-gray-400 rounded-full opacity-30"></div>
                   </div>
                 </div>
-                
+
                 {/* Featured Yellow iPhone */}
                 <div className="transform hover:scale-110 transition-all duration-500 cursor-pointer relative">
                   <div className="absolute -inset-2 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-[2.5rem] blur opacity-75 animate-pulse"></div>
@@ -273,7 +158,7 @@ const AuctionDetail = () => {
               {/* Countdown Timer */}
               <div className="mb-6">
                 <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-200 rounded-2xl p-5">
-                  <CountdownTimer endTime={new Date(Date.now() + 23 * 60 * 60 * 1000 + 12 * 60 * 1000 + 59 * 1000)} />
+                  <CountdownTimer />
                 </div>
               </div>
 
@@ -288,14 +173,14 @@ const AuctionDetail = () => {
                     <p className="text-sm text-gray-600 mt-2">
                       Khởi điểm: <span className="font-semibold">{startingPrice} VNĐ</span>
                     </p>
-                    
+
                     {/* Trạng thái giá sàn */}
                     <div className="mt-4">
                       {isReserveMet ? (
                         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white px-6 py-3 rounded-2xl font-bold shadow-xl border border-emerald-400 hover:scale-105 transform transition-all duration-300">
                           <span className="text-lg animate-pulse">✨</span>
                           <span>Giá sàn đã đạt</span>
-                          
+
                         </div>
                       ) : (
                         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-3 rounded-2xl font-bold shadow-xl border border-yellow-400 hover:scale-105 transform transition-all duration-300">
@@ -306,7 +191,7 @@ const AuctionDetail = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Proxy Bidding Status */}
                   {isHighestBidder && (
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4 mb-4">
@@ -322,22 +207,6 @@ const AuctionDetail = () => {
                           🤖 Hệ thống đang tự động đấu giá cho bạn
                         </p>
                       </div>
-                    </div>
-                  )}
-                  
-                  {/* Bid Confirmation */}
-                  {showBidConfirmation && (
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
-                      <p className="text-lg font-bold text-blue-800 mb-2 flex items-center gap-2">
-                        <span className="text-green-500">✓</span>
-                        Đặt giá thành công!
-                      </p>
-                      <p className="text-sm text-blue-700">
-                        🎯 Giá tối đa: <span className="font-bold">{maxBidAmount} VNĐ</span>
-                      </p>
-                      <p className="text-sm text-blue-700">
-                        ⚡ Hệ thống sẽ tự động đấu giá thay bạn
-                      </p>
                     </div>
                   )}
                 </div>
@@ -357,84 +226,17 @@ const AuctionDetail = () => {
                       ?
                     </button>
                   </label>
-                  
+
                   <div className="relative mb-4">
                     <input
                       type="text"
                       placeholder="Nhập giá tối đa..."
                       value={maxBidAmount}
-                      onChange={handleMaxBidChange}
+                      onChange={(e) => setMaxBidAmount(e.target.value)}
                       className="w-full px-6 py-4 pr-16 border-2 border-yellow-300 rounded-xl text-lg font-semibold focus:outline-none focus:ring-4 focus:ring-yellow-200 focus:border-yellow-400 transition-all duration-300 bg-white"
                     />
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold">
                       VNĐ
-                    </div>
-                  </div>
-
-                  {/* Gợi ý số tiền */}
-                  {suggestions.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm font-semibold text-gray-700 mb-2">💡 Có thể bạn muốn nhập:</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {suggestions.map((suggestion, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleSuggestionClick(suggestion)}
-                            className="px-3 py-2 bg-gradient-to-r from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border border-yellow-300 hover:border-yellow-400 rounded-lg text-sm font-semibold text-gray-700 transition-all duration-300 hover:scale-105 hover:shadow-md"
-                          >
-                            {suggestion} VNĐ
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quick Bid Buttons */}
-                  <div className="mb-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-3">⚡ Đặt nhanh:</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <button
-                        onClick={() => {
-                          // Lấy giá trị hiện tại từ input (nếu có) hoặc giá đấu hiện tại
-                          const baseValue = maxBidAmount ? 
-                            parseFloat(maxBidAmount.replace(/\./g, '')) : 
-                            parseFloat(currentPrice.replace(/\./g, ''));
-                          const newValue = baseValue + 1000000; // +1 triệu
-                          setMaxBidAmount(formatNumber(newValue.toString()));
-                          setSuggestions([]); // Ẩn gợi ý sau khi đặt nhanh
-                        }}
-                        className="px-4 py-3 bg-white hover:bg-yellow-100 border-2 border-yellow-300 hover:border-yellow-400 rounded-xl text-sm font-bold transition-all duration-300 hover:scale-105"
-                      >
-                        +1M
-                      </button>
-                      <button
-                        onClick={() => {
-                          // Lấy giá trị hiện tại từ input (nếu có) hoặc giá đấu hiện tại
-                          const baseValue = maxBidAmount ? 
-                            parseFloat(maxBidAmount.replace(/\./g, '')) : 
-                            parseFloat(currentPrice.replace(/\./g, ''));
-                          const newValue = baseValue + 2000000; // +2 triệu
-                          setMaxBidAmount(formatNumber(newValue.toString()));
-                          setSuggestions([]); // Ẩn gợi ý sau khi đặt nhanh
-                        }}
-                        className="px-4 py-3 bg-white hover:bg-yellow-100 border-2 border-yellow-300 hover:border-yellow-400 rounded-xl text-sm font-bold transition-all duration-300 hover:scale-105"
-                      >
-                        +2M
-                      </button>
-                      <button
-                        onClick={() => {
-                          // Lấy giá trị hiện tại từ input (nếu có) hoặc giá đấu hiện tại
-                          const baseValue = maxBidAmount ? 
-                            parseFloat(maxBidAmount.replace(/\./g, '')) : 
-                            parseFloat(currentPrice.replace(/\./g, ''));
-                          const newValue = baseValue + 5000000; // +5 triệu
-                          setMaxBidAmount(formatNumber(newValue.toString()));
-                          setSuggestions([]); // Ẩn gợi ý sau khi đặt nhanh
-                        }}
-                        className="px-4 py-3 bg-white hover:bg-yellow-100 border-2 border-yellow-300 hover:border-yellow-400 rounded-xl text-sm font-bold transition-all duration-300 hover:scale-105"
-                      >
-                        +5M
-                      </button>
                     </div>
                   </div>
 

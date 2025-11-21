@@ -5,6 +5,7 @@ import LoginDialog from "../pop-up/login";
 import RegisterDialog from "../pop-up/register";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "sonner";
+import NotificationBell from "../testUI/NotificationBell";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -118,12 +119,13 @@ const Header = () => {
               </span>
             </button>
 
-            <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
+            {/* <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
               <Bell className="w-5 h-5 xl:w-6 xl:h-6" />
               <span className="text-sm xl:text-base hidden xl:inline font-medium">
                 Thông báo
               </span>
-            </button>
+            </button> */}
+            <NotificationBell />
 
             {currentUser ? (
               <div className="relative">

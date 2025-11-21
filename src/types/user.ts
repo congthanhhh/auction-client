@@ -21,3 +21,10 @@ export interface PermissionResponse {
     name: string;
     description: string;
 }
+
+export interface SimpleUserResponse {
+    username: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+}
