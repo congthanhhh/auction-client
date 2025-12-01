@@ -11,7 +11,10 @@ interface AuctionState {
     recentBids: BidResponse[];
     sessionNotifications: NotificationResponse[];
     isConnected: boolean;
-    reservePriceMet: boolean; // Cờ trạng thái giá sàn
+    reservePriceMet: boolean;
+    startPrice: number;
+    buyNowPrice: number | null;
+    endTime: string | null;
 
     initializeSocket: (sessionId: number) => void;
     leaveSocket: (sessionId: number) => void;
@@ -26,7 +29,10 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
     recentBids: [],
     sessionNotifications: [],
     isConnected: false,
-    reservePriceMet: false, // Mặc định là false
+    reservePriceMet: false,
+    startPrice: 0,
+    buyNowPrice: null,
+    endTime: null,
 
     fetchAuctionDetail: async (sessionId: number) => {
         try {
@@ -35,15 +41,23 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
             const sessionData = sessionRes.data;
 
             set({
+                startPrice: sessionData.startPrice,
+                buyNowPrice: sessionData.buyNowPrice,
+
+                // Nếu chưa có ai bid, currentPrice từ API chính là startPrice (theo logic backend)
                 currentPrice: sessionData.currentPrice,
-                reservePriceMet: sessionData.reservePriceMet, // Cập nhật từ API
-                highestBidder: sessionData.highestBidder ? sessionData.highestBidder.username : 'Chưa có'
+
+                reservePriceMet: sessionData.reservePriceMet,
+                highestBidder: sessionData.highestBidder ? sessionData.highestBidder.username : 'Chưa có',
+                endTime: sessionData.endTime
             });
 
             // 2. Lấy lịch sử đấu giá
             const history = await bidService.getBidHistory(sessionId, 1, 10);
             if (history.data.data.length > 0) {
                 set({ recentBids: history.data.data });
+            } else {
+                set({ recentBids: [] });
             }
         } catch (error) {
             console.error("Lỗi tải chi tiết phiên:", error);

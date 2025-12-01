@@ -6,36 +6,11 @@ import { useAuctionStore } from '@/stores/useAuctionStore';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { formatJavaDate } from '@/lib/dateUtils';
+import CountdownTimer from './CountdownTimer';
 
-// Countdown Timer Component (Static for now)
-const CountdownTimer = () => {
-  return (
-    <div className="text-center">
-      <p className="text-xs font-semibold text-yellow-700 mb-2 flex items-center justify-center gap-2">
-        <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse"></span>
-        THỜI GIAN CÒN LẠI
-      </p>
-      <div className="flex gap-2 justify-center">
-        <div className="bg-white border border-yellow-300 rounded-lg px-3 py-2 min-w-[50px] shadow-md">
-          <div className="text-lg font-black text-gray-900">23</div>
-          <div className="text-xs font-medium text-yellow-600 uppercase">Giờ</div>
-        </div>
-        <div className="bg-white border border-yellow-300 rounded-lg px-3 py-2 min-w-[50px] shadow-md">
-          <div className="text-lg font-black text-gray-900">12</div>
-          <div className="text-xs font-medium text-yellow-600 uppercase">Phút</div>
-        </div>
-        <div className="bg-white border border-yellow-300 rounded-lg px-3 py-2 min-w-[50px] shadow-md">
-          <div className="text-lg font-black text-gray-900">59</div>
-          <div className="text-xs font-medium text-yellow-600 uppercase">Giây</div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const AuctionDetail = () => {
   const navigate = useNavigate();
-  const [maxBidAmount, setMaxBidAmount] = useState('');
   const [showProxyBiddingInfo, setShowProxyBiddingInfo] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -81,7 +56,10 @@ const AuctionDetail = () => {
     leaveSocket,
     placeBid,
     fetchAuctionDetail,
-    addSessionNotification
+    addSessionNotification,
+    startPrice,
+    buyNowPrice,
+    endTime
   } = useAuctionStore();
 
   const globalNotifications = useNotificationStore(state => state.notifications);
@@ -132,6 +110,22 @@ const AuctionDetail = () => {
     }
   };
 
+  const handleBuyNow = async () => {
+    if (!isAuthenticated) return alert("Vui lòng đăng nhập!");
+    if (!buyNowPrice) return;
+
+    // Confirm với user
+    const confirm = window.confirm(`Bạn có chắc muốn mua ngay với giá ${buyNowPrice.toLocaleString()} VNĐ không?`);
+    if (!confirm) return;
+
+    try {
+      // Gọi hàm placeBid với số tiền bằng giá Mua Ngay
+      await placeBid(sessionId, buyNowPrice);
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Lỗi mua ngay");
+    }
+  };
+
 
 
   return (
@@ -175,10 +169,21 @@ const AuctionDetail = () => {
               </div>
 
               {/* Countdown Timer */}
-              <div className="mb-4">
+              {/* <div className="mb-4">
                 <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-3">
                   <p className="text-center text-xs text-yellow-800 font-semibold mb-2">THỜI GIAN CÒN LẠI</p>
                   <CountdownTimer />
+                </div>
+              </div> */}
+
+              <div className="mb-4">
+                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-center text-xs text-yellow-800 font-semibold mb-2">
+                    THỜI GIAN CÒN LẠI
+                  </p>
+
+                  {/* Truyền endTime vào component */}
+                  <CountdownTimer targetDate={endTime} />
                 </div>
               </div>
 
@@ -190,11 +195,34 @@ const AuctionDetail = () => {
                     <p className="text-2xl font-black tracking-tight">
                       {currentPrice.toLocaleString()} VNĐ
                     </p>
+                    {recentBids.length === 0 && (
+                      <span className="absolute -top-3 -right-3 bg-blue-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-sm">
+                        Khởi điểm
+                      </span>
+                    )}
                   </div>
-
-                  <p className="text-sm text-gray-600 mt-3">
-                    Người dẫn đầu: <span className="font-bold text-gray-800">{highestBidder}</span>
+                  <p className="text-xs text-gray-500 mt-3">
+                    Giá khởi điểm: <span className="font-bold">{startPrice.toLocaleString()} VNĐ</span>
                   </p>
+
+                  {/* <p className="text-sm text-gray-600 mt-3">
+                    Người dẫn đầu: <span className="font-bold text-gray-800">{highestBidder}</span>
+                  </p> */}
+
+                  {buyNowPrice && (
+                    <div className="mb-4 animate-pulse">
+                      <button
+                        onClick={handleBuyNow}
+                        className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-black py-3 px-4 rounded-xl shadow-lg transform transition-all hover:scale-[1.02] flex items-center justify-center gap-2 border-2 border-white/20"
+                      >
+                        <span className="text-xl">⚡</span>
+                        <div className="flex flex-col items-start">
+                          <span className="text-xs font-medium uppercase tracking-wider opacity-90">Mua ngay với giá</span>
+                          <span className="text-lg leading-none">{buyNowPrice.toLocaleString()} VNĐ</span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Trạng thái giá sàn */}
                   <div className="mt-3">

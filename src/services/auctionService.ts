@@ -1,10 +1,7 @@
 
 
-// Định nghĩa Interface cho Chi tiết Phiên Đấu Giá
-
 import axiosClient from "@/lib/axios";
 
-// Dựa trên AuctionSessionResponse của Backend
 export interface AuctionSessionDetail {
     id: number;
     startTime: string;
@@ -14,6 +11,7 @@ export interface AuctionSessionDetail {
     buyNowPrice: number | null;
     status: string;
     reservePriceMet: boolean;
+
 
     product: {
         id: number;
