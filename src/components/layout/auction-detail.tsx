@@ -167,15 +167,6 @@ const AuctionDetail = () => {
                   <span>Đăng bởi <strong className="text-yellow-600">Admin</strong></span>
                 </div>
               </div>
-
-              {/* Countdown Timer */}
-              {/* <div className="mb-4">
-                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-center text-xs text-yellow-800 font-semibold mb-2">THỜI GIAN CÒN LẠI</p>
-                  <CountdownTimer />
-                </div>
-              </div> */}
-
               <div className="mb-4">
                 <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-3">
                   <p className="text-center text-xs text-yellow-800 font-semibold mb-2">

@@ -17,6 +17,7 @@ interface AuthState {
     verifyOtp: (data: OtpVerifyRequest) => Promise<void>;
     fetchCurrentUser: () => Promise<void>;
     logout: () => Promise<void>;
+    loginWithGoogle: (code: string) => Promise<void>;
 
     setAccessToken: (token: string) => void; // Dùng cho Axios Interceptor gọi
 
@@ -58,6 +59,28 @@ export const useAuthStore = create<AuthState>()(
                         isAuthenticated: false
                     });
                     throw err; // Ném lỗi để UI component bắt được (nếu cần hiển thị toast)
+                }
+            },
+
+            loginWithGoogle: async (code: string) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const response = await authService.loginWithGoogle(code);
+                    set({
+                        accessToken: response.data.accessToken,
+                        isAuthenticated: true,
+                        isLoading: false
+                    });
+                    await get().fetchCurrentUser();
+
+                } catch (err: any) {
+                    console.error("Google Login Error:", err);
+                    set({
+                        isLoading: false,
+                        error: 'Đăng nhập Google thất bại. Vui lòng thử lại.',
+                        isAuthenticated: false
+                    });
+                    throw err;
                 }
             },
 

@@ -8,6 +8,7 @@ import { useAuthStore } from './stores/useAuthStore'
 import { useEffect } from 'react'
 import { useNotificationStore } from './stores/useNotificationStore.js'
 import AuctionDetailPage from './components/testUI/AuctionDetailPage.js'
+import Authenticate from './components/pages/Authenticate.js'
 
 function App() {
 
@@ -48,8 +49,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<SearchResults />} />
         <Route path="/auction/:auctionId" element={<AuctionDetail />} />
-        {/* router test */}
-        <Route path="/auction-test/:auctionId" element={<AuctionDetailPage />} />
+        <Route path="/authenticate" element={<Authenticate />} />
       </Routes>
     </Router>
   )
