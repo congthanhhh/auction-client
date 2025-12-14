@@ -7,6 +7,7 @@ import { useNotificationStore } from '@/stores/useNotificationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { formatJavaDate } from '@/lib/dateUtils';
 import CountdownTimer from './CountdownTimer';
+import { getProductById } from '@/lib/productUtils';
 
 
 const AuctionDetail = () => {
@@ -42,6 +43,9 @@ const AuctionDetail = () => {
 
   const { auctionId } = useParams<{ auctionId: string }>();
   const sessionId = Number(auctionId);
+
+  // Lấy thông tin sản phẩm từ db.json theo auctionId
+  const productData = getProductById(auctionId || '');
 
   // Lấy thông tin user hiện tại để so sánh trong lịch sử đấu giá
   const { isAuthenticated, currentUser } = useAuthStore();
@@ -152,7 +156,7 @@ const AuctionDetail = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-6 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-full"></div>
                   <h1 className="text-lg lg:text-xl font-bold text-gray-900 leading-tight">
-                    iPhone 17 Series {/* TODO: Thay bằng {product.name} từ store */}
+                    {productData?.name || 'Sản phẩm đấu giá'}
                   </h1>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -439,7 +443,9 @@ const AuctionDetail = () => {
 
                 {/* Color/Model Name */}
                 <div className="text-center">
-                  <h3 className="text-white font-bold text-lg mb-1">iPhone 17 Pro</h3>
+                  <h3 className="text-white font-bold text-lg mb-1 line-clamp-2 px-4">
+                    {productData?.name.split('|')[0].trim() || 'Sản phẩm đấu giá'}
+                  </h3>
                   <p className="text-yellow-400 font-semibold text-sm">{productImages[currentImageIndex].color}</p>
                 </div>
 
@@ -479,7 +485,7 @@ const AuctionDetail = () => {
               </h2>
               <div className="text-gray-700 leading-relaxed space-y-4">
                 <p className="text-base">
-                  <span className="font-bold text-yellow-600">iPhone 17 Series</span> được thiết kế từ trong ra ngoài để trở thành những phiên bản iPhone mạnh mẽ nhất từ trước đến nay.
+                  <span className="font-bold text-yellow-600">{productData?.name || 'Sản phẩm này'}</span> được thiết kế từ trong ra ngoài để trở thành phiên bản mạnh mẽ nhất từ trước đến nay.
                 </p>
                 <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border-l-4 border-yellow-400">
                   <p className="text-sm">

@@ -1,11 +1,10 @@
-import { Search, ShoppingCart, User, Menu, ChevronDown, LogOut, Bell } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, ChevronDown, LogOut, Bell, Plus } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginDialog from "../pop-up/login";
 import RegisterDialog from "../pop-up/register";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "sonner";
-import NotificationBell from "../testUI/NotificationBell";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -112,6 +111,16 @@ const Header = () => {
 
           {/* User Actions */}
           <div className="flex items-center space-x-3 xl:space-x-4 flex-shrink-0">
+            <button 
+              onClick={() => navigate('/create-auction')}
+              className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 transition-colors px-3 xl:px-4 py-2 xl:py-2.5 rounded-lg"
+            >
+              <Plus className="w-4 h-4 xl:w-5 xl:h-5" />
+              <span className="text-sm xl:text-base font-medium">
+                Đăng bán
+              </span>
+            </button>
+
             <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
               <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6" />
               <span className="text-sm xl:text-base hidden xl:inline font-medium">
@@ -119,13 +128,12 @@ const Header = () => {
               </span>
             </button>
 
-            {/* <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
+            <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
               <Bell className="w-5 h-5 xl:w-6 xl:h-6" />
               <span className="text-sm xl:text-base hidden xl:inline font-medium">
                 Thông báo
               </span>
-            </button> */}
-            <NotificationBell />
+            </button>
 
             {currentUser ? (
               <div className="relative">
@@ -145,6 +153,16 @@ const Header = () => {
                         <div className="font-medium text-gray-900">{currentUser.firstName} {currentUser.lastName}</div>
                         <div className="text-xs">{currentUser.email}</div>
                       </div>
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2"
+                        onClick={() => {
+                          navigate('/user/profile');
+                          setShowUserDropdown(false);
+                        }}
+                      >
+                        <User className="w-4 h-4" />
+                        <span>Trang cá nhân</span>
+                      </button>
                       <button
                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2"
                         onClick={() => {

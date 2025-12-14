@@ -3,11 +3,13 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Home from './components/layout/home'
 import SearchResults from './components/layout/search-results'
 import AuctionDetail from './components/layout/auction-detail'
+import UserDetail from './components/layout/user-detail'
+import ProductDetail from './components/layout/product-detail'
+import CreateAuction from './components/layout/create-auction'
 import { Toaster } from 'sonner'
 import { useAuthStore } from './stores/useAuthStore'
 import { useEffect } from 'react'
 import { useNotificationStore } from './stores/useNotificationStore.js'
-import AuctionDetailPage from './components/testUI/AuctionDetailPage.js'
 import Authenticate from './components/pages/Authenticate.js'
 
 function App() {
@@ -49,6 +51,9 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<SearchResults />} />
         <Route path="/auction/:auctionId" element={<AuctionDetail />} />
+        <Route path="/product/:productId" element={<ProductDetail />} />
+        <Route path="/user/profile" element={<UserDetail />} />
+        <Route path="/create-auction" element={<CreateAuction />} />
         <Route path="/authenticate" element={<Authenticate />} />
       </Routes>
     </Router>
