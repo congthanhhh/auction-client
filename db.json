@@ -89,11 +89,29 @@
       "status": "active",
       "endTime": "2024-02-24T09:20:00Z",
       "description": "Máy ảnh mirrorless cho người mới bắt đầu"
+    },
+    {
+      "id": "11",
+      "name": "Dell XPS 13 Plus | Intel Core i7 Gen 13",
+      "currentPrice": "32.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-25T15:30:00Z",
+      "description": "Laptop cao cấp Dell XPS 13 thiết kế tinh tế"
+    },
+    {
+      "id": "12",
+      "name": "Samsung Galaxy Tab S9 Ultra | 512GB",
+      "currentPrice": "28.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "active",
+      "endTime": "2024-02-26T13:00:00Z",
+      "description": "Tablet Android cao cấp nhất từ Samsung"
     }
   ],
   "upcomingProducts": [
     {
-      "id": "11",
+      "id": "13",
       "name": "iPhone 16 Pro 128GB | Titan Tự Nhiên",
       "currentPrice": "32.990.000đ",
       "image": "/src/assets/productex.webp",
@@ -181,11 +199,29 @@
       "status": "upcoming",
       "startingPrice": "45.000.000đ",
       "startTime": "2024-03-01T11:20:00Z"
+    },
+    {
+      "id": "21",
+      "name": "GoPro Hero 12 Black | 5.3K Action Camera",
+      "currentPrice": "12.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "10.000.000đ",
+      "startTime": "2024-03-02T10:00:00Z"
+    },
+    {
+      "id": "22",
+      "name": "DJI Mini 4 Pro | Fly More Combo",
+      "currentPrice": "29.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "upcoming",
+      "startingPrice": "24.000.000đ",
+      "startTime": "2024-03-03T14:30:00Z"
     }
   ],
   "featuredProducts": [
     {
-      "id": "21",
+      "id": "23",
       "name": "MacBook Pro 16 M3 Max | 1TB SSD | Space Black",
       "currentPrice": "89.990.000đ",
       "image": "/src/assets/productex.webp",
@@ -257,12 +293,28 @@
       "description": "SUV điện hạng sang từ Tesla"
     },
     {
-      "id": "30",
+      "id": "32",
       "name": "Rolex Submariner Date | Steel 41mm",
       "currentPrice": "299.000.000đ",
       "image": "/src/assets/productex.webp",
       "status": "featured",
       "description": "Đồng hồ luxury Swiss Rolex Submariner"
+    },
+    {
+      "id": "33",
+      "name": "Nikon Z9 | Professional Mirrorless Camera",
+      "currentPrice": "129.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "Máy ảnh mirrorless chuyên nghiệp cao cấp nhất từ Nikon"
+    },
+    {
+      "id": "34",
+      "name": "Meta Quest 3 | 512GB | VR Headset",
+      "currentPrice": "17.990.000đ",
+      "image": "/src/assets/productex.webp",
+      "status": "featured",
+      "description": "Kính thực tế ảo Meta Quest thế hệ mới nhất"
     }
   ]
 }
