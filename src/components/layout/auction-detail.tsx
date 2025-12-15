@@ -59,12 +59,14 @@ const AuctionDetail = () => {
     addSessionNotification,
     startPrice,
     buyNowPrice,
-    endTime
+    endTime,
+    myMaxBid
   } = useAuctionStore();
 
   const globalNotifications = useNotificationStore(state => state.notifications);
   const [bidAmount, setBidAmount] = useState<number>(0);
   const [showProxyInfo, setShowProxyInfo] = useState(false); // State cho tooltip
+  const isLeading = highestBidder === currentUser?.username;
 
   // 1. Khởi tạo dữ liệu và Socket
   useEffect(() => {
@@ -253,6 +255,18 @@ const AuctionDetail = () => {
                   ))}
                 </ul>
               </div>
+
+              {/* Phần hiển thị Max Bid của tôi */}
+              {isLeading && myMaxBid && (
+                <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                  <span className="text-xs text-blue-700 font-semibold flex items-center gap-1">
+                    <span>🎯</span> Giá max bạn đã đặt:
+                  </span>
+                  <span className="text-sm font-bold text-blue-800">
+                    {myMaxBid.toLocaleString()} VNĐ
+                  </span>
+                </div>
+              )}
 
               {/* Proxy Bidding Input */}
               <div className="mt-auto">

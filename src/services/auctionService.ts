@@ -12,6 +12,8 @@ export interface AuctionSessionDetail {
     status: string;
     reservePriceMet: boolean;
 
+    myMaxBid: number | null;
+
 
     product: {
         id: number;

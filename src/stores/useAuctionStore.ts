@@ -15,6 +15,7 @@ interface AuctionState {
     startPrice: number;
     buyNowPrice: number | null;
     endTime: string | null;
+    myMaxBid: number | null;
 
     initializeSocket: (sessionId: number) => void;
     leaveSocket: (sessionId: number) => void;
@@ -33,6 +34,7 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
     startPrice: 0,
     buyNowPrice: null,
     endTime: null,
+    myMaxBid: null,
 
     fetchAuctionDetail: async (sessionId: number) => {
         try {
@@ -49,7 +51,8 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
 
                 reservePriceMet: sessionData.reservePriceMet,
                 highestBidder: sessionData.highestBidder ? sessionData.highestBidder.username : 'Chưa có',
-                endTime: sessionData.endTime
+                endTime: sessionData.endTime,
+                myMaxBid: sessionData.myMaxBid
             });
 
             // 2. Lấy lịch sử đấu giá
@@ -86,7 +89,7 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
 
                 return {
                     recentBids: [newBid, ...state.recentBids].slice(0, 20),
-                    currentPrice: newBid.displayedAmount
+                    // currentPrice: newBid.displayedAmount
                 };
             });
         });
@@ -115,5 +118,9 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
 
     placeBid: async (sessionId: number, amount: number) => {
         await bidService.placeBid(sessionId, { amount });
+        // c1: Sau khi bid xong, tự set myMaxBid luôn vì mình vừa đặt
+        set({ myMaxBid: amount });
+
+        // c2: await get().fetchAuctionDetail(sessionId);
     }
 }));

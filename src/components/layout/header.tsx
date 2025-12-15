@@ -5,7 +5,6 @@ import LoginDialog from "../pop-up/login";
 import RegisterDialog from "../pop-up/register";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "sonner";
-import NotificationBell from "../testUI/NotificationBell";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,7 +124,7 @@ const Header = () => {
                 Thông báo
               </span>
             </button> */}
-            <NotificationBell />
+            {/* <NotificationBell /> */}
 
             {currentUser ? (
               <div className="relative">

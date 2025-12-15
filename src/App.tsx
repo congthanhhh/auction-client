@@ -7,7 +7,6 @@ import { Toaster } from 'sonner'
 import { useAuthStore } from './stores/useAuthStore'
 import { useEffect } from 'react'
 import { useNotificationStore } from './stores/useNotificationStore.js'
-import AuctionDetailPage from './components/testUI/AuctionDetailPage.js'
 import Authenticate from './components/pages/Authenticate.js'
 
 function App() {
