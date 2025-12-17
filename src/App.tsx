@@ -6,7 +6,6 @@ import AuctionDetail from './components/layout/auction-detail'
 import UserDetail from './components/layout/user-detail'
 import ProductDetail from './components/layout/product-detail'
 import CreateAuction from './components/layout/create-auction'
-import { Toaster } from 'sonner'
 import { useAuthStore } from './stores/useAuthStore'
 import { useEffect } from 'react'
 import { useNotificationStore } from './stores/useNotificationStore.js'
@@ -46,7 +45,6 @@ function App() {
 
   return (
     <Router>
-      <Toaster position="top-right" richColors />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<SearchResults />} />

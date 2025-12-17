@@ -1,6 +1,6 @@
 
-
 import axiosClient from "@/lib/axios";
+import type { CreateAuctionSessionRequest, CreateAuctionSessionResponse, AuctionSession, AuctionSessionListResponse } from "@/types/auction";
 
 export interface AuctionSessionDetail {
     id: number;
@@ -35,5 +35,25 @@ export const auctionService = {
     // GET /auction-sessions/{id}
     getDetail(id: number) {
         return axiosClient.get<AuctionSessionDetail>(`/auction-sessions/${id}`);
+    },
+
+    // GET list auction sessions với pagination
+    getAuctionSessions(params?: { page?: number; size?: number; status?: string }) {
+        return axiosClient.get<AuctionSessionListResponse>('/auction-sessions', { params });
+    },
+
+    // POST create auction session (Bước 3 sau khi tạo product)
+    createAuctionSession(data: CreateAuctionSessionRequest) {
+        return axiosClient.post<CreateAuctionSessionResponse>('/auction-sessions', data);
+    },
+
+    // PUT update auction session
+    updateAuctionSession(sessionId: number, data: Partial<CreateAuctionSessionRequest>) {
+        return axiosClient.put<CreateAuctionSessionResponse>(`/auction-sessions/${sessionId}`, data);
+    },
+
+    // DELETE auction session
+    deleteAuctionSession(sessionId: number) {
+        return axiosClient.delete(`/auction-sessions/${sessionId}`);
     }
 };

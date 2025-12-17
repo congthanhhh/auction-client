@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   User, Mail, Phone, MapPin, Calendar, Award, 
   TrendingUp, ShoppingBag, Heart, Star, Trophy,
-  Clock, DollarSign, Package, CheckCircle, ArrowLeft
+  Clock, DollarSign, Package, CheckCircle, ArrowLeft, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useUserStore } from '@/stores/useUserStore';
 import PageLayout from './page-layout';
+import { toast } from 'sonner';
 
 interface TabType {
   id: string;
@@ -15,9 +17,32 @@ interface TabType {
 }
 
 const UserDetail = () => {
-  const { currentUser } = useAuthStore();
+  const { currentUser, isAuthenticated } = useAuthStore();
+  const { profileUser, isLoadingProfile, error, fetchMyProfile, clearError } = useUserStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Fetch user profile khi component mount
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast.error('Vui lòng đăng nhập để xem hồ sơ');
+      navigate('/');
+      return;
+    }
+    
+    fetchMyProfile();
+  }, [isAuthenticated, navigate, fetchMyProfile]);
+
+  // Handle error
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      clearError();
+    }
+  }, [error, clearError]);
+
+  // Use profileUser from store, fallback to currentUser from auth
+  const displayUser = profileUser || currentUser;
 
   // Mock data - thay bằng API thực tế
   const userStats = {
@@ -76,6 +101,34 @@ const UserDetail = () => {
     { id: 'achievements', label: 'Điểm uy tín', icon: Trophy },
   ];
 
+  // Loading state
+  if (isLoadingProfile) {
+    return (
+      <PageLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Đang tải thông tin...</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // No user data
+  if (!displayUser) {
+    return (
+      <PageLayout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4 flex items-center justify-center">
+          <div className="text-center">
+            <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Không tìm thấy thông tin người dùng</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4">
@@ -106,13 +159,15 @@ const UserDetail = () => {
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-500 animate-pulse"></div>
                 <div className="relative">
                   <img
-                    src={currentUser?.avatar || 'https://ui-avatars.com/api/?name=' + (currentUser?.fullName || 'GreenSkyGame')}
+                    src={`https://ui-avatars.com/api/?name=${displayUser.firstName}+${displayUser.lastName}&background=random`}
                     alt="User Avatar"
                     className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white shadow-xl"
                   />
-                  <div className="absolute -bottom-2 -right-2 bg-green-500 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
+                  {displayUser.isActive && (
+                    <div className="absolute -bottom-2 -right-2 bg-green-500 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-white" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -120,7 +175,7 @@ const UserDetail = () => {
               <div className="flex-1 text-center md:text-left">
                 <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
                   <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    {currentUser?.fullName || 'GreenSkyGame'}
+                    {displayUser.firstName} {displayUser.lastName}
                   </h1>
                   <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1 rounded-full flex items-center gap-1">
                     <Star className="w-4 h-4 text-white fill-white" />
@@ -130,17 +185,21 @@ const UserDetail = () => {
                 
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600">
+                    <User className="w-4 h-4" />
+                    <span className="font-medium">@{displayUser.username}</span>
+                  </div>
+                  <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600">
                     <Mail className="w-4 h-4" />
-                    <span>{currentUser?.email || 'greenskygame@gmail.com'}</span>
+                    <span>{displayUser.email}</span>
                   </div>
-                  <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600">
-                    <Phone className="w-4 h-4" />
-                    <span>{currentUser?.phoneNumber || '+84 xxx xxx xxx'}</span>
-                  </div>
-                  <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    <span>Tham gia từ tháng 1/2025</span>
-                  </div>
+                  {displayUser.roles && displayUser.roles.length > 0 && (
+                    <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600">
+                      <Award className="w-4 h-4" />
+                      <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                        {displayUser.roles.map(r => r.name).join(', ')}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Quick Stats */}

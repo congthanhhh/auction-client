@@ -117,7 +117,7 @@ const Header = () => {
             >
               <Plus className="w-4 h-4 xl:w-5 xl:h-5" />
               <span className="text-sm xl:text-base font-medium">
-                Đăng bán
+                Tạo phiên đấu giá
               </span>
             </button>
 
