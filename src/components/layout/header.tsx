@@ -4,7 +4,10 @@ import { useNavigate } from "react-router-dom";
 import LoginDialog from "../pop-up/login";
 import RegisterDialog from "../pop-up/register";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useNotificationStore } from "@/stores/useNotificationStore";
+import { useCartStore } from "@/stores/useCartStore";
 import { toast } from "sonner";
+import NotificationDropdown from "../pop-up/notification-dropdown";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,10 +18,13 @@ const Header = () => {
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
 
   const navigate = useNavigate();
 
   const { currentUser, logout } = useAuthStore();
+  const { unreadCount } = useNotificationStore();
+  const { cartItems } = useCartStore();
   const handleLogout = async () => {
     await logout();
     toast.success('Đăng xuất thành công', {
@@ -121,20 +127,45 @@ const Header = () => {
               </span>
             </button>
 
-            <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
-              <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6" />
+            <button 
+              onClick={() => navigate('/cart')}
+              className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded relative"
+            >
+              <div className="relative">
+                <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6" />
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItems.length > 99 ? '99+' : cartItems.length}
+                  </span>
+                )}
+              </div>
               <span className="text-sm xl:text-base hidden xl:inline font-medium">
                 Giỏ hàng
               </span>
             </button>
 
-            <button className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded">
-              <Bell className="w-5 h-5 xl:w-6 xl:h-6" />
-              <span className="text-sm xl:text-base hidden xl:inline font-medium">
-                Thông báo
-              </span>
-            </button>
-            {/* <NotificationBell /> */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded"
+              >
+                <div className="relative">
+                  <Bell className="w-5 h-5 xl:w-6 xl:h-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm xl:text-base hidden xl:inline font-medium">
+                  Thông báo
+                </span>
+              </button>
+              <NotificationDropdown 
+                isOpen={showNotificationDropdown} 
+                onClose={() => setShowNotificationDropdown(false)} 
+              />
+            </div>
 
             {currentUser ? (
               <div className="relative">
@@ -204,9 +235,23 @@ const Header = () => {
               <button className="text-white hover:text-gray-300 transition-colors">
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <button className="text-white hover:text-gray-300 transition-colors">
-                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                  className="text-white hover:text-gray-300 transition-colors relative"
+                >
+                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse" style={{ fontSize: '9px' }}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                <NotificationDropdown 
+                  isOpen={showNotificationDropdown} 
+                  onClose={() => setShowNotificationDropdown(false)} 
+                />
+              </div>
               <button
                 className="bg-blue-600 hover:bg-blue-700 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors"
                 onClick={() => setShowLoginDialog(true)}

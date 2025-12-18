@@ -21,6 +21,10 @@ export const notificationService = {
         return axiosClient.patch(`/notifications/${id}/read`);
     },
 
+    markAllAsRead() {
+        return axiosClient.patch('/notifications/read-all');
+    },
+
     getUnreadCount() {
         return axiosClient.get<{ count: number }>('/notifications/unread-count');
     }
