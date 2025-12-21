@@ -17,6 +17,12 @@ import AdminUsers from './components/layout/admin/admin-users'
 import AdminProducts from './components/layout/admin/admin-products'
 import AdminAuctions from './components/layout/admin/admin-auctions'
 import AdminOrders from './components/layout/admin/admin-orders'
+import AdminReports from './components/layout/admin/admin-reports'
+import AdminDisputes from './components/layout/admin/admin-disputes'
+import AdminCategories from './components/layout/admin/admin-categories'
+import AdminVerification from './components/layout/admin/admin-verification'
+import AdminSettings from './components/layout/admin/admin-settings'
+import AdminLogs from './components/layout/admin/admin-logs'
 import { useAuthStore } from './stores/useAuthStore'
 import { useEffect } from 'react'
 import Authenticate from './components/pages/Authenticate.js'
@@ -63,6 +69,12 @@ function App() {
           <Route path="products" element={<AdminProducts />} />
           <Route path="auctions" element={<AdminAuctions />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="reports" element={<AdminReports />} />
+          <Route path="disputes" element={<AdminDisputes />} />
+          <Route path="categories" element={<AdminCategories />} />
+          <Route path="verification" element={<AdminVerification />} />
+          <Route path="settings" element={<AdminSettings />} />
+          <Route path="logs" element={<AdminLogs />} />
         </Route>
       </Routes>
     </Router>

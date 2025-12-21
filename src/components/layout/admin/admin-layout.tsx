@@ -10,6 +10,12 @@ import {
   X,
   LogOut,
   ChevronLeft,
+  FileText,
+  AlertTriangle,
+  Tag,
+  Shield,
+  Settings,
+  Activity,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 
@@ -25,6 +31,12 @@ const AdminLayout = () => {
     { path: "/admin/products", icon: Package, label: "Sản phẩm" },
     { path: "/admin/auctions", icon: Gavel, label: "Phiên đấu giá" },
     { path: "/admin/orders", icon: ShoppingCart, label: "Đơn hàng" },
+    { path: "/admin/reports", icon: FileText, label: "Báo cáo" },
+    { path: "/admin/disputes", icon: AlertTriangle, label: "Khiếu nại" },
+    { path: "/admin/categories", icon: Tag, label: "Danh mục" },
+    { path: "/admin/verification", icon: Shield, label: "Xác minh" },
+    { path: "/admin/settings", icon: Settings, label: "Cài đặt" },
+    { path: "/admin/logs", icon: Activity, label: "Nhật ký" },
   ];
 
   const handleLogout = () => {
