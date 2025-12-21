@@ -4,8 +4,6 @@ import { useNavigate } from "react-router-dom";
 import LoginDialog from "../pop-up/login";
 import RegisterDialog from "../pop-up/register";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useNotificationStore } from "@/stores/useNotificationStore";
-import { useCartStore } from "@/stores/useCartStore";
 import { toast } from "sonner";
 import NotificationDropdown from "../pop-up/notification-dropdown";
 
@@ -23,8 +21,10 @@ const Header = () => {
   const navigate = useNavigate();
 
   const { currentUser, logout } = useAuthStore();
-  const { unreadCount } = useNotificationStore();
-  const { cartItems } = useCartStore();
+  
+  // Mock data cho giao diện tĩnh
+  const unreadCount = 2;
+  const cartItemsCount = 5;
   const handleLogout = async () => {
     await logout();
     toast.success('Đăng xuất thành công', {
@@ -133,9 +133,9 @@ const Header = () => {
             >
               <div className="relative">
                 <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6" />
-                {cartItems.length > 0 && (
+                {cartItemsCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {cartItems.length > 99 ? '99+' : cartItems.length}
+                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
                   </span>
                 )}
               </div>

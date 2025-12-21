@@ -8,17 +8,22 @@ import ProductDetail from './components/layout/product-detail'
 import CreateAuction from './components/layout/create-auction'
 import NotificationsPage from './components/layout/notifications'
 import Cart from './components/layout/cart'
+import Payment from './components/layout/payment'
+import Shipping from './components/layout/shipping'
+import Invoice from './components/layout/invoice'
+import AdminLayout from './components/layout/admin/admin-layout'
+import AdminDashboard from './components/layout/admin/admin-dashboard'
+import AdminUsers from './components/layout/admin/admin-users'
+import AdminProducts from './components/layout/admin/admin-products'
+import AdminAuctions from './components/layout/admin/admin-auctions'
+import AdminOrders from './components/layout/admin/admin-orders'
 import { useAuthStore } from './stores/useAuthStore'
 import { useEffect } from 'react'
-import { useNotificationStore } from './stores/useNotificationStore.js'
-import { useCartStore } from './stores/useCartStore'
 import Authenticate from './components/pages/Authenticate.js'
 
 function App() {
 
   const { accessToken, fetchCurrentUser } = useAuthStore();
-  const { connectGlobalSocket, disconnectGlobalSocket, fetchNotifications } = useNotificationStore();
-  const { fetchCart } = useCartStore();
 
   // --- LOGIC TỰ ĐỘNG (Thay thế nút bấm thủ công) ---
   useEffect(() => {
@@ -34,19 +39,6 @@ function App() {
     }
   }, [fetchCurrentUser, accessToken]);
   // ------------------------------------------------
-  useEffect(() => {
-    if (accessToken) {
-      connectGlobalSocket();
-      fetchNotifications();
-      fetchCart(); // Fetch giỏ hàng khi đăng nhập
-    } else {
-      disconnectGlobalSocket();
-    }
-    // Cleanup khi unmount
-    return () => {
-      disconnectGlobalSocket();
-    };
-  }, [accessToken]);
 
   return (
     <Router>
@@ -59,7 +51,19 @@ function App() {
         <Route path="/create-auction" element={<CreateAuction />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/payment" element={<Payment />} />
+        <Route path="/shipping/:trackingCode" element={<Shipping />} />
+        <Route path="/invoice/:orderId" element={<Invoice />} />
         <Route path="/authenticate" element={<Authenticate />} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="auctions" element={<AdminAuctions />} />
+          <Route path="orders" element={<AdminOrders />} />
+        </Route>
       </Routes>
     </Router>
   )

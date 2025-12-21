@@ -3,7 +3,6 @@ import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import PageLayout from './page-layout';
 import { useAuctionStore } from '@/stores/useAuctionStore';
-import { useNotificationStore } from '@/stores/useNotificationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { formatJavaDate } from '@/lib/dateUtils';
 import CountdownTimer from './CountdownTimer';
@@ -67,7 +66,6 @@ const AuctionDetail = () => {
     myMaxBid
   } = useAuctionStore();
 
-  const globalNotifications = useNotificationStore(state => state.notifications);
   const [bidAmount, setBidAmount] = useState<number>(0);
   const [showProxyInfo, setShowProxyInfo] = useState(false); // State cho tooltip
   const isLeading = highestBidder === currentUser?.username;
@@ -82,17 +80,6 @@ const AuctionDetail = () => {
       if (sessionId) leaveSocket(sessionId);
     };
   }, [sessionId]);
-
-  // 2. Lắng nghe thông báo Private (Cái chuông -> Box vàng)
-  useEffect(() => {
-    if (globalNotifications.length > 0) {
-      const latestNotif = globalNotifications[0];
-      // Kiểm tra link để biết thông báo này có thuộc phiên đấu giá hiện tại không
-      if (latestNotif.link && latestNotif.link.includes(`/auctions/${sessionId}`)) {
-        addSessionNotification(latestNotif);
-      }
-    }
-  }, [globalNotifications, sessionId]);
 
   // 3. Gợi ý giá bid tiếp theo (Giá hiện tại + bước giá ví dụ)
   useEffect(() => {

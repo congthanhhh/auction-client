@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import { Facebook, Twitter, Github } from "lucide-react";
+import TermsAndRulesModal from '../pop-up/terms-and-rules-modal';
 
 const Footer = () => {
+  const [showTerms, setShowTerms] = useState(false);
+
   return (
     <footer className="bg-gray-800 text-white py-8 lg:py-12 w-full mt-auto">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -81,6 +85,14 @@ const Footer = () => {
                   Sản phẩm nổi bật
                 </a>
               </li>
+              <li>
+                <button
+                  onClick={() => setShowTerms(true)}
+                  className="text-gray-300 hover:text-white transition-colors duration-200 text-sm lg:text-base text-left"
+                >
+                  Điều khoản & Quy định
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -110,6 +122,9 @@ const Footer = () => {
           </div>
         </div>
       </div>
+
+      {/* Terms and Rules Modal */}
+      <TermsAndRulesModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
     </footer>
   );
 };

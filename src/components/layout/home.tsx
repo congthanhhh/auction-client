@@ -4,6 +4,8 @@ import { ArrowUp } from 'lucide-react';
 import Header from './header';
 import Footer from './footer';
 import ProductCard from '../ui/product-card';
+import HowToBidModal from '../pop-up/how-to-bid-modal';
+import TermsAndRulesModal from '../pop-up/terms-and-rules-modal';
 import {
   Carousel,
   CarouselContent,
@@ -57,7 +59,7 @@ const ScrollToTop = () => {
   return isVisible ? (
     <button
       onClick={scrollToTop}
-      className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-all duration-300 z-50 hover:scale-110"
+      className="fixed bottom-6 right-28 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-all duration-300 z-50 hover:scale-110"
       aria-label="Scroll to top"
     >
       <ArrowUp size={20} />
@@ -116,6 +118,8 @@ const CountdownTimer = ({ endTime }: { endTime: Date }) => {
 
 const Home = () => {
   const navigate = useNavigate();
+  const [showHowToBid, setShowHowToBid] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [activeProducts, setActiveProducts] = useState<Product[]>([]);
   const [upcomingProducts, setUpcomingProducts] = useState<Product[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
@@ -357,6 +361,33 @@ const Home = () => {
 
       {/* Scroll to Top Button */}
       <ScrollToTop />
+
+      {/* Floating Action Buttons - Vertical Stack */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+        {/* Terms and Rules Button - Top */}
+        <button
+          onClick={() => setShowTerms(true)}
+          className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-3 rounded-full shadow-xl transition-all duration-300 hover:scale-110 border-2 border-white flex items-center justify-center w-12 h-12"
+          aria-label="Điều khoản & Quy định"
+          title="Điều khoản & Quy định"
+        >
+          <span className="text-2xl font-bold">!</span>
+        </button>
+
+        {/* How to Bid Button - Bottom */}
+        <button
+          onClick={() => setShowHowToBid(true)}
+          className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-3 rounded-full shadow-xl transition-all duration-300 hover:scale-110 border-2 border-white flex items-center justify-center w-12 h-12"
+          aria-label="Hướng dẫn đấu giá"
+          title="Hướng dẫn đấu giá"
+        >
+          <span className="text-2xl font-bold">?</span>
+        </button>
+      </div>
+
+      {/* Modals */}
+      <HowToBidModal isOpen={showHowToBid} onClose={() => setShowHowToBid(false)} />
+      <TermsAndRulesModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
     </div>
   );
 };

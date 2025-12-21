@@ -1,18 +1,85 @@
 import { useState } from "react";
 import { Bell, Check, CheckCheck, Filter } from "lucide-react";
-import { useNotificationStore } from "@/stores/useNotificationStore";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import PageLayout from "./page-layout";
 import { useNavigate } from "react-router-dom";
-import { notificationService } from "@/services/notificationService";
-import type { NotificationResponse } from "@/types/common";
+import { toast } from "sonner";
+
+// Mock Notification Type
+interface NotificationResponse {
+  id: number;
+  message: string;
+  type: 'AUCTION' | 'SYSTEM' | 'PAYMENT';
+  isRead: boolean;
+  createdAt: string;
+  link?: string;
+}
+
+// Mock Data
+const MOCK_NOTIFICATIONS: NotificationResponse[] = [
+  {
+    id: 1,
+    message: "Bạn đã thắng đấu giá iPhone 15 Pro Max với giá 28.500.000đ",
+    type: "AUCTION",
+    isRead: false,
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    link: "/auction/101",
+  },
+  {
+    id: 2,
+    message: "Phiên đấu giá MacBook Pro M3 sẽ bắt đầu trong 30 phút nữa",
+    type: "AUCTION",
+    isRead: false,
+    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    link: "/auction/102",
+  },
+  {
+    id: 3,
+    message: "Hệ thống sẽ bảo trì từ 00:00 - 02:00 ngày mai",
+    type: "SYSTEM",
+    isRead: true,
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 4,
+    message: "Thanh toán đơn hàng #12345 thành công. Đơn hàng đang được xử lý",
+    type: "PAYMENT",
+    isRead: true,
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    link: "/cart",
+  },
+  {
+    id: 5,
+    message: "Có người đã đặt giá cao hơn bạn trong phiên đấu giá Samsung S24 Ultra",
+    type: "AUCTION",
+    isRead: false,
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    link: "/auction/105",
+  },
+  {
+    id: 6,
+    message: "Phiên đấu giá AirPods Pro 2 đã kết thúc. Bạn không thắng cuộc",
+    type: "AUCTION",
+    isRead: true,
+    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 7,
+    message: "Chào mừng bạn đến với hệ thống đấu giá trực tuyến!",
+    type: "SYSTEM",
+    isRead: true,
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
 
 const NotificationsPage = () => {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead } = useNotificationStore();
+  const [notifications, setNotifications] = useState<NotificationResponse[]>(MOCK_NOTIFICATIONS);
   const [filter, setFilter] = useState<"all" | "unread">("all");
-  const [loading, setLoading] = useState(false);
+
+  // Calculate unread count
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   // Filter notifications based on selected filter
   const filteredNotifications =
@@ -45,10 +112,12 @@ const NotificationsPage = () => {
     }
   };
 
-  const handleNotificationClick = async (notif: NotificationResponse) => {
+  const handleNotificationClick = (notif: NotificationResponse) => {
     // Đánh dấu đã đọc
     if (!notif.isRead) {
-      await markAsRead(notif.id);
+      setNotifications(prev =>
+        prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n)
+      );
     }
 
     // Navigate nếu có link
@@ -57,21 +126,9 @@ const NotificationsPage = () => {
     }
   };
 
-  const handleMarkAllAsRead = async () => {
-    setLoading(true);
-    try {
-      await notificationService.markAllAsRead();
-      // Reload notifications
-      const res = await notificationService.getMyNotifications(1, 50);
-      useNotificationStore.setState({
-        notifications: res.data.data,
-        unreadCount: 0,
-      });
-    } catch (error) {
-      console.error("Lỗi đánh dấu tất cả đã đọc:", error);
-    } finally {
-      setLoading(false);
-    }
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    toast.success("Đã đánh dấu tất cả là đã đọc");
   };
 
   return (
@@ -100,8 +157,7 @@ const NotificationsPage = () => {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  disabled={loading}
-                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
                 >
                   <CheckCheck className="w-4 h-4" />
                   <span>Đánh dấu tất cả đã đọc</span>

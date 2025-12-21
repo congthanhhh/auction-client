@@ -1,9 +1,44 @@
 import { Bell, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useNotificationStore } from "@/stores/useNotificationStore";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
-import type { NotificationResponse } from "@/types/common";
+
+// Mock Notification Type
+interface NotificationResponse {
+  id: number;
+  message: string;
+  type: 'AUCTION' | 'SYSTEM' | 'PAYMENT';
+  isRead: boolean;
+  createdAt: string;
+  link?: string;
+}
+
+// Mock Data - 10 thông báo gần nhất
+const MOCK_NOTIFICATIONS: NotificationResponse[] = [
+  {
+    id: 1,
+    message: "Bạn đã thắng đấu giá iPhone 15 Pro Max với giá 28.500.000đ",
+    type: "AUCTION",
+    isRead: false,
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    link: "/auction/101",
+  },
+  {
+    id: 2,
+    message: "Phiên đấu giá MacBook Pro M3 sẽ bắt đầu trong 30 phút nữa",
+    type: "AUCTION",
+    isRead: false,
+    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    link: "/auction/102",
+  },
+  {
+    id: 3,
+    message: "Hệ thống sẽ bảo trì từ 00:00 - 02:00 ngày mai",
+    type: "SYSTEM",
+    isRead: true,
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -12,17 +47,11 @@ interface NotificationDropdownProps {
 
 const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownProps) => {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead } = useNotificationStore();
 
-  // Lấy 10 thông báo gần nhất
-  const recentNotifications = notifications.slice(0, 10);
+  // Calculate unread count
+  const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.isRead).length;
 
-  const handleNotificationClick = async (notif: NotificationResponse) => {
-    // Đánh dấu đã đọc
-    if (!notif.isRead) {
-      await markAsRead(notif.id);
-    }
-
+  const handleNotificationClick = (notif: NotificationResponse) => {
     // Navigate nếu có link
     if (notif.link) {
       navigate(notif.link);
@@ -66,14 +95,14 @@ const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownProps) =>
 
         {/* Notification List */}
         <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-          {recentNotifications.length === 0 ? (
+          {MOCK_NOTIFICATIONS.length === 0 ? (
             <div className="py-12 text-center">
               <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 text-sm">Chưa có thông báo nào</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {recentNotifications.map((notif) => (
+              {MOCK_NOTIFICATIONS.map((notif) => (
                 <div
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
