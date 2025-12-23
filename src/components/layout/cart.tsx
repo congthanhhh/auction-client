@@ -108,7 +108,7 @@ const MOCK_CART_ITEMS: CartItem[] = [
   },
 ];
 
-// Mock feedbacks data
+// Mock feedbacks data - Updated to new rating system (+1/0/-1)
 const MOCK_FEEDBACKS: Record<number, { given?: Feedback; received?: Feedback }> = {
   6: {
     given: {
@@ -116,7 +116,7 @@ const MOCK_FEEDBACKS: Record<number, { given?: Feedback; received?: Feedback }> 
       orderId: 6,
       fromUserId: 1,
       toUserId: 128,
-      rating: 5,
+      rating: 1, // Tốt (+1)
       comment: 'Người bán rất tốt, hàng chính hãng, đóng gói cẩn thận. Giao hàng nhanh chóng. Rất hài lòng!',
       createdAt: '2024-12-15T12:00:00Z',
       fromUser: { id: 1, name: 'Tôi', role: 'buyer' },
@@ -127,7 +127,7 @@ const MOCK_FEEDBACKS: Record<number, { given?: Feedback; received?: Feedback }> 
       orderId: 6,
       fromUserId: 128,
       toUserId: 1,
-      rating: 5,
+      rating: 1, // Tốt (+1)
       comment: 'Người mua rất nhiệt tình, thanh toán nhanh, nhận hàng đúng hẹn. Sẽ ưu tiên bán hàng lại cho khách này!',
       createdAt: '2024-12-15T14:30:00Z',
       fromUser: { id: 128, name: 'Vũ Thị F', role: 'seller' },
@@ -236,6 +236,33 @@ const Cart = () => {
   };
 
   const viewInvoice = (item: CartItem) => {
+    // Determine shipping status and timeline based on order status
+    let shippingStatus = 'accepted';
+    let trackingTimeline = [
+      { id: 1, label: 'Accepted', date: '', completed: false },
+      { id: 2, label: 'In transit', date: '', completed: false },
+      { id: 3, label: 'Out for delivery', date: '', completed: false },
+      { id: 4, label: 'Delivered', date: '', completed: false },
+    ];
+
+    if (item.orderStatus === 'SHIPPING') {
+      shippingStatus = 'in_transit';
+      trackingTimeline = [
+        { id: 1, label: 'Accepted', date: item.shippedAt ? new Date(item.shippedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '\n' + new Date(item.shippedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '', completed: true },
+        { id: 2, label: 'In transit', date: 'Đang vận chuyển...', completed: true },
+        { id: 3, label: 'Out for delivery', date: '', completed: false },
+        { id: 4, label: 'Delivered', date: '', completed: false },
+      ];
+    } else if (item.orderStatus === 'COMPLETED') {
+      shippingStatus = 'delivered';
+      trackingTimeline = [
+        { id: 1, label: 'Accepted', date: item.shippedAt ? new Date(item.shippedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '\n' + new Date(item.shippedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '', completed: true },
+        { id: 2, label: 'In transit', date: 'Đã vận chuyển', completed: true },
+        { id: 3, label: 'Out for delivery', date: 'Đã giao hàng', completed: true },
+        { id: 4, label: 'Delivered', date: 'Hoàn thành', completed: true },
+      ];
+    }
+
     navigate(`/invoice/${item.id}`, {
       state: {
         invoice: {
@@ -244,6 +271,13 @@ const Cart = () => {
           issueDate: item.wonAt,
           paymentDate: item.wonAt,
           status: item.orderStatus,
+          
+          // Add tracking info
+          trackingCode: item.trackingCode || null,
+          shippingCarrier: 'Giao Hàng Nhanh',
+          shippingStatus: shippingStatus,
+          trackingTimeline: trackingTimeline,
+          
           company: {
             name: 'Auction Website',
             address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
@@ -266,7 +300,7 @@ const Cart = () => {
           product: {
             id: item.id,
             name: item.productName,
-            imageUrl: item.imageUrl,
+            imageUrl: 'https://via.placeholder.com/120',
             description: 'Sản phẩm đấu giá',
             quantity: 1,
             price: item.price,
@@ -502,22 +536,13 @@ const Cart = () => {
                               </p>
                             )}
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => viewShipping(item)}
-                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              <Package size={16} />
-                              Theo dõi
-                            </button>
-                            <button
-                              onClick={(e) => copyTrackingCode(item.trackingCode!, e)}
-                              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                              title="Sao chép mã"
-                            >
-                              <Copy size={16} />
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => copyTrackingCode(item.trackingCode!, e)}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                            title="Sao chép mã"
+                          >
+                            <Copy size={16} />
+                          </button>
                         </div>
                         {item.autoCompleteDate && item.orderStatus === 'SHIPPING' && (
                           <div className="mt-3 pt-3 border-t border-blue-200">
@@ -542,10 +567,10 @@ const Cart = () => {
                     {(item.orderStatus === 'PAID' || item.orderStatus === 'SHIPPING' || item.orderStatus === 'COMPLETED') && (
                       <button
                         onClick={() => viewInvoice(item)}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
                       >
                         <CreditCard size={16} />
-                        Xem hóa đơn
+                        Xem đơn hàng & vận chuyển
                       </button>
                     )}
                       {item.orderStatus === 'UNPAID' && (

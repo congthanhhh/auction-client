@@ -12,9 +12,20 @@ import {
   Mail,
   User,
   Building,
+  Truck,
+  PackageCheck,
+  Copy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PageLayout from './page-layout';
+
+// Tracking timeline steps (4 steps as per requirement)
+interface TrackingStep {
+  id: number;
+  label: string;
+  date?: string;
+  completed: boolean;
+}
 
 // Mock invoice data
 const MOCK_INVOICE = {
@@ -23,6 +34,17 @@ const MOCK_INVOICE = {
   issueDate: '2024-12-20T10:30:00Z',
   paymentDate: '2024-12-20T10:35:00Z',
   status: 'PAID',
+  
+  // Shipping tracking info
+  trackingCode: 'AQUILAS366771120YQ',
+  shippingCarrier: 'Giao Hàng Nhanh',
+  shippingStatus: 'delivered', // accepted, in_transit, out_for_delivery, delivered
+  trackingTimeline: [
+    { id: 1, label: 'Accepted', date: 'Nov 7, 2020\n4:50am', completed: true },
+    { id: 2, label: 'In transit', date: 'Nov 7, 2020\n7:21am', completed: true },
+    { id: 3, label: 'Out for delivery', date: 'Nov 7, 2020\n11:11am', completed: true },
+    { id: 4, label: 'Delivered', date: 'Nov 7, 2020\n6:14pm', completed: true },
+  ] as TrackingStep[],
   
   company: {
     name: 'Auction Website',
@@ -99,33 +121,40 @@ const Invoice = () => {
     // In real app, generate and download PDF
   };
 
+  const copyTrackingCode = () => {
+    if (invoice.trackingCode) {
+      navigator.clipboard.writeText(invoice.trackingCode);
+      toast.success('Đã sao chép mã vận đơn!');
+    }
+  };
+
   return (
     <PageLayout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* Header Actions - Hide on print */}
-        <div className="flex items-center justify-between mb-8 print:hidden">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 md:mb-8 print:hidden">
           <button
             onClick={() => navigate('/cart')}
             className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft size={20} />
-            Quay lại
+            <span className="text-sm md:text-base">Quay lại</span>
           </button>
           
-          <div className="flex gap-3">
+          <div className="flex gap-2 md:gap-3 w-full sm:w-auto">
             <button
               onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm md:text-base"
             >
-              <Download size={18} />
-              Tải PDF
+              <Download size={16} className="md:w-5 md:h-5" />
+              <span>Tải PDF</span>
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition-colors text-sm md:text-base"
             >
-              <Printer size={18} />
-              In hóa đơn
+              <Printer size={16} className="md:w-5 md:h-5" />
+              <span>In hóa đơn</span>
             </button>
           </div>
         </div>
@@ -133,31 +162,31 @@ const Invoice = () => {
         {/* Invoice Container */}
         <div className="bg-white shadow-xl rounded-2xl overflow-hidden print:shadow-none">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-6">
-            <div className="flex items-start justify-between">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 sm:px-6 md:px-8 py-4 md:py-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3">
               <div>
-                <h1 className="text-3xl font-bold mb-2">HÓA ĐƠN</h1>
-                <p className="text-blue-100 text-sm">Hóa đơn thanh toán đấu giá</p>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">HÓA ĐƠN</h1>
+                <p className="text-blue-100 text-xs md:text-sm">Hóa đơn thanh toán đấu giá</p>
               </div>
-              <div className="text-right">
-                <div className="bg-white/20 px-4 py-2 rounded-lg inline-flex items-center gap-2 mb-2">
-                  <CheckCircle size={20} />
-                  <span className="font-semibold">Đã thanh toán</span>
+              <div className="text-left sm:text-right w-full sm:w-auto">
+                <div className="bg-white/20 px-3 md:px-4 py-2 rounded-lg inline-flex items-center gap-2 mb-2">
+                  <CheckCircle size={18} className="md:w-5 md:h-5" />
+                  <span className="font-semibold text-sm md:text-base">Đã thanh toán</span>
                 </div>
-                <p className="text-blue-100 text-sm">Mã: {invoice.invoiceNumber}</p>
+                <p className="text-blue-100 text-xs md:text-sm">Mã: {invoice.invoiceNumber}</p>
               </div>
             </div>
           </div>
 
           {/* Company & Order Info */}
-          <div className="grid md:grid-cols-2 gap-6 px-8 py-6 border-b">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 px-4 sm:px-6 md:px-8 py-4 md:py-6 border-b">
             {/* Company Info */}
             <div>
-              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Building size={18} className="text-blue-600" />
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm md:text-base">
+                <Building size={16} className="text-blue-600 md:w-5 md:h-5" />
                 Thông tin công ty
               </h3>
-              <div className="space-y-2 text-sm text-gray-700">
+              <div className="space-y-2 text-xs md:text-sm text-gray-700">
                 <p className="font-bold text-lg text-gray-900">{invoice.company.name}</p>
                 <p className="flex items-start gap-2">
                   <MapPin size={14} className="text-gray-500 flex-shrink-0 mt-0.5" />
@@ -339,6 +368,112 @@ const Invoice = () => {
               </p>
             </div>
           </div>
+
+          {/* Shipping Tracking Section */}
+          {invoice.trackingCode && (
+            <div className="px-8 py-6 border-t bg-gradient-to-br from-blue-50 to-indigo-50">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Truck size={20} className="text-blue-600" />
+                Thông tin vận chuyển
+              </h3>
+
+              {/* Tracking Code */}
+              <div className="bg-white border-2 border-blue-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Mã vận đơn</p>
+                    <p className="text-lg font-bold text-gray-900 font-mono">
+                      {invoice.trackingCode}
+                    </p>
+                    <p className="text-sm text-blue-600 mt-1">
+                      Đơn vị vận chuyển: <span className="font-semibold">{invoice.shippingCarrier}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={copyTrackingCode}
+                    className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    title="Sao chép mã vận đơn"
+                  >
+                    <Copy size={20} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tracking Timeline - 4 Steps */}
+              <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-6">Tiến trình giao hàng</h4>
+                
+                {/* Progress Bar */}
+                <div className="relative mb-8">
+                  {/* Connection Line */}
+                  <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200">
+                    <div 
+                      className="h-full bg-blue-600 transition-all duration-500"
+                      style={{ 
+                        width: `${((invoice.trackingTimeline.filter(s => s.completed).length - 1) / (invoice.trackingTimeline.length - 1)) * 100}%` 
+                      }}
+                    />
+                  </div>
+
+                  {/* Steps */}
+                  <div className="relative flex justify-between">
+                    {invoice.trackingTimeline.map((step) => (
+                      <div key={step.id} className="flex flex-col items-center" style={{ flex: 1 }}>
+                        {/* Circle */}
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${
+                            step.completed
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'bg-white border-gray-300 text-gray-400'
+                          } shadow-lg transition-all duration-300`}
+                        >
+                          {step.completed ? (
+                            <CheckCircle size={20} />
+                          ) : (
+                            <div className="w-3 h-3 rounded-full bg-gray-300" />
+                          )}
+                        </div>
+                        
+                        {/* Label */}
+                        <div className="mt-3 text-center">
+                          <p className={`text-sm font-semibold whitespace-nowrap ${
+                            step.completed ? 'text-gray-900' : 'text-gray-400'
+                          }`}>
+                            {step.label}
+                          </p>
+                          {step.date && (
+                            <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">
+                              {step.date}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="flex items-center justify-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <PackageCheck className="text-green-600" size={20} />
+                  <span className="text-sm font-semibold text-green-700">
+                    {invoice.shippingStatus === 'delivered' ? 'Đã giao hàng thành công' :
+                     invoice.shippingStatus === 'out_for_delivery' ? 'Đang giao hàng' :
+                     invoice.shippingStatus === 'in_transit' ? 'Đang vận chuyển' :
+                     'Đã tiếp nhận'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Shipping Note */}
+              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <span className="font-semibold">📦 Lưu ý:</span> Người bán đã gửi hàng cho đơn vị vận chuyển. 
+                  Mọi thắc mắc về giao hàng vui lòng liên hệ trực tiếp với đơn vị vận chuyển. 
+                  Phí ship được thỏa thuận giữa người mua và người bán.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="px-8 py-6 bg-gray-100 border-t">

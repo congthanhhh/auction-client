@@ -3,7 +3,7 @@ export interface Feedback {
   orderId: number;
   fromUserId: number;
   toUserId: number;
-  rating: number; // 1-5
+  rating: 1 | 0 | -1; // +1 (Tốt), 0 (Trung bình), -1 (Không hài lòng)
   comment: string;
   createdAt: string;
   fromUser: {
@@ -20,9 +20,9 @@ export interface Feedback {
 
 export interface UserRating {
   userId: number;
-  averageRating: number; // Điểm trung bình
+  totalScore: number; // Tổng điểm (tích lũy từ +1/0/-1)
   totalFeedbacks: number; // Tổng số đánh giá
-  positiveCount: number; // Số đánh giá 4-5 sao
-  neutralCount: number; // Số đánh giá 3 sao
-  negativeCount: number; // Số đánh giá 1-2 sao
+  positiveCount: number; // Số đánh giá Tốt (+1)
+  neutralCount: number; // Số đánh giá Trung bình (0)
+  negativeCount: number; // Số đánh giá Không hài lòng (-1)
 }

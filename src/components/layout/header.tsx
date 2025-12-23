@@ -54,13 +54,13 @@ const Header = () => {
 
   return (
     <header className="bg-black text-white fixed top-0 left-0 right-0 z-[100] shadow-md w-full">
-      <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 py-2 xs:py-2.5 sm:py-3 lg:py-4 max-w-7xl">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 max-w-7xl">
         {/* Desktop Header */}
-        <div className="hidden lg:flex items-center justify-between gap-4 xl:gap-6">
+        <div className="hidden lg:flex items-center justify-between gap-4">
           {/* Logo */}
-          <div className="flex items-center space-x-3 xl:space-x-4 flex-shrink-0">
+          <div className="flex items-center space-x-3 flex-shrink-0">
             <h1
-              className="text-xl xl:text-2xl 2xl:text-3xl font-bold cursor-pointer hover:text-gray-300 transition-colors"
+              className="text-2xl font-bold cursor-pointer hover:text-gray-300 transition-colors"
               onClick={() => navigate("/")}
             >
               DG
@@ -70,24 +70,24 @@ const Header = () => {
             <div className="relative">
               <button
                 onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                className="bg-white text-black px-3 py-2 xl:px-4 xl:py-2.5 rounded-xl text-sm xl:text-base w-28 xl:w-32 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                className="bg-white text-black px-4 py-2 rounded-xl text-sm w-32 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between hover:bg-gray-100 transition-colors"
               >
                 <span className="truncate">Danh mục</span>
-                <ChevronDown className="w-4 h-4 xl:w-5 xl:h-5 flex-shrink-0" />
+                <ChevronDown className="w-4 h-4 flex-shrink-0" />
               </button>
 
               {showCategoryDropdown && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[110] w-36 xl:w-40 2xl:w-44">
-                  <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors rounded-t-lg">
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[110] w-40">
+                  <button className="w-full text-left px-4 py-2.5 text-sm text-black hover:bg-gray-100 transition-colors rounded-t-lg">
                     Điện thoại
                   </button>
-                  <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors">
+                  <button className="w-full text-left px-4 py-2.5 text-sm text-black hover:bg-gray-100 transition-colors">
                     Laptop
                   </button>
-                  <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors">
+                  <button className="w-full text-left px-4 py-2.5 text-sm text-black hover:bg-gray-100 transition-colors">
                     Tablet
                   </button>
-                  <button className="w-full text-left px-4 py-3 text-sm xl:text-base text-black hover:bg-gray-100 transition-colors rounded-b-lg">
+                  <button className="w-full text-left px-4 py-2.5 text-sm text-black hover:bg-gray-100 transition-colors rounded-b-lg">
                     Phụ kiện
                   </button>
                 </div>
@@ -96,7 +96,7 @@ const Header = () => {
           </div>
 
           {/* Search Bar */}
-          <div className="flex-1 max-w-2xl mx-6 xl:mx-8">
+          <div className="flex-1 max-w-2xl mx-4">
             <div className="relative">
               <input
                 type="text"
@@ -104,25 +104,25 @@ const Header = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleDesktopKeyPress}
-                className="w-full px-4 py-2.5 xl:px-5 xl:py-3 pr-12 rounded-lg bg-white text-black placeholder-gray-500 text-sm xl:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                className="w-full px-4 py-2.5 pr-12 rounded-lg bg-white text-black placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
               <button
                 onClick={() => handleSearch(searchQuery)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors p-1"
               >
-                <Search className="w-5 h-5 xl:w-6 xl:h-6" />
+                <Search className="w-5 h-5" />
               </button>
             </div>
           </div>
 
           {/* User Actions */}
-          <div className="flex items-center space-x-3 xl:space-x-4 flex-shrink-0">
+          <div className="flex items-center space-x-3 flex-shrink-0">
             <button
               onClick={() => navigate('/create-auction')}
-              className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 transition-colors px-3 xl:px-4 py-2 xl:py-2.5 rounded-lg"
+              className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 transition-colors px-4 py-2.5 rounded-lg whitespace-nowrap"
             >
-              <Plus className="w-4 h-4 xl:w-5 xl:h-5" />
-              <span className="text-sm xl:text-base font-medium">
+              <Plus className="w-5 h-5" />
+              <span className="text-sm font-medium">
                 Tạo phiên đấu giá
               </span>
             </button>
@@ -132,14 +132,14 @@ const Header = () => {
               className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded relative"
             >
               <div className="relative">
-                <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6" />
+                <ShoppingCart className="w-5 h-5" />
                 {cartItemsCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                     {cartItemsCount > 99 ? '99+' : cartItemsCount}
                   </span>
                 )}
               </div>
-              <span className="text-sm xl:text-base hidden xl:inline font-medium">
+              <span className="text-sm font-medium">
                 Giỏ hàng
               </span>
             </button>
@@ -150,14 +150,14 @@ const Header = () => {
                 className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded"
               >
                 <div className="relative">
-                  <Bell className="w-5 h-5 xl:w-6 xl:h-6" />
+                  <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
                 </div>
-                <span className="text-sm xl:text-base hidden xl:inline font-medium">
+                <span className="text-sm font-medium">
                   Thông báo
                 </span>
               </button>
@@ -170,12 +170,12 @@ const Header = () => {
             {currentUser ? (
               <div className="relative">
                 <button
-                  className="bg-green-600 hover:bg-green-700 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-sm xl:text-base transition-colors flex items-center space-x-2 font-medium"
+                  className="bg-green-600 hover:bg-green-700 px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center space-x-2 font-medium whitespace-nowrap"
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                 >
-                  <User className="w-4 h-4 xl:w-5 xl:h-5" />
+                  <User className="w-4 h-4" />
                   <span>{currentUser.username}</span>
-                  <ChevronDown className={`w-3 h-3 xl:w-4 xl:h-4 transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
                 {showUserDropdown && (
@@ -211,10 +211,10 @@ const Header = () => {
               </div>
             ) : (
               <button
-                className="bg-blue-600 hover:bg-blue-700 px-4 xl:px-6 py-2 xl:py-2.5 rounded-lg text-sm xl:text-base transition-colors flex items-center space-x-2 font-medium"
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center space-x-2 font-medium whitespace-nowrap"
                 onClick={() => setShowLoginDialog(true)}
               >
-                <User className="w-4 h-4 xl:w-5 xl:h-5" />
+                <User className="w-4 h-4" />
                 <span>Đăng nhập</span>
               </button>
             )}
@@ -223,26 +223,34 @@ const Header = () => {
 
         {/* Mobile/Tablet Header */}
         <div className="lg:hidden">
-          <div className="flex items-center justify-between mb-2 sm:mb-3">
+          <div className="flex items-center justify-between mb-3">
             <h1
-              className="text-lg sm:text-xl font-bold cursor-pointer hover:text-gray-300 transition-colors"
+              className="text-xl font-bold cursor-pointer hover:text-gray-300 transition-colors"
               onClick={() => navigate("/")}
             >
               DG
             </h1>
 
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <button className="text-white hover:text-gray-300 transition-colors">
-                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => navigate('/cart')}
+                className="text-white hover:text-gray-300 transition-colors relative"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartItemsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {cartItemsCount > 9 ? '9+' : cartItemsCount}
+                  </span>
+                )}
               </button>
               <div className="relative">
                 <button 
                   onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
                   className="text-white hover:text-gray-300 transition-colors relative"
                 >
-                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse" style={{ fontSize: '9px' }}>
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}

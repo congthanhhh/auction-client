@@ -1,8 +1,8 @@
-import { X, Star, MessageSquare, Clock, CheckCircle } from 'lucide-react';
+import { X, ThumbsUp, Minus, ThumbsDown, MessageSquare, Clock, CheckCircle } from 'lucide-react';
 
 interface Feedback {
   id: number;
-  rating: number;
+  rating: 1 | 0 | -1; // Changed from 1-5 stars to +1/0/-1
   comment: string;
   createdAt: string;
   fromUser: {
@@ -38,38 +38,42 @@ const ViewFeedbackModal = ({
 }: ViewFeedbackModalProps) => {
   if (!isOpen) return null;
 
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            size={20}
-            className={`${
-              star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-            }`}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  const getRatingText = (rating: number) => {
-    switch (rating) {
-      case 1: return 'Rất tệ';
-      case 2: return 'Tệ';
-      case 3: return 'Trung bình';
-      case 4: return 'Tốt';
-      case 5: return 'Xuất sắc';
-      default: return '';
+  const renderRatingBadge = (rating: 1 | 0 | -1) => {
+    if (rating === 1) {
+      return (
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full">
+          <ThumbsUp size={20} className="text-green-600" />
+          <span className="font-bold text-green-700">Tốt (+1)</span>
+        </div>
+      );
+    } else if (rating === 0) {
+      return (
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 rounded-full">
+          <Minus size={20} className="text-yellow-600" />
+          <span className="font-bold text-yellow-700">Trung bình (0)</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 rounded-full">
+          <ThumbsDown size={20} className="text-red-600" />
+          <span className="font-bold text-red-700">Không hài lòng (-1)</span>
+        </div>
+      );
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4 overflow-y-auto"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-8"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Chi tiết đánh giá</h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -78,7 +82,7 @@ const ViewFeedbackModal = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/50 rounded-lg transition-colors"
           >
             <X size={24} className="text-gray-600" />
           </button>
@@ -110,11 +114,8 @@ const ViewFeedbackModal = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 mb-3">
-                  {renderStars(feedbackGiven.rating)}
-                  <span className="text-sm font-semibold text-gray-700">
-                    {getRatingText(feedbackGiven.rating)}
-                  </span>
+                <div className="mb-3">
+                  {renderRatingBadge(feedbackGiven.rating)}
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-3">
@@ -167,7 +168,7 @@ const ViewFeedbackModal = ({
           ) : feedbackReceived ? (
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
               <div className="flex items-center gap-2 mb-4">
-                <Star className="text-purple-600 fill-purple-600" size={24} />
+                <CheckCircle className="text-purple-600" size={24} />
                 <h3 className="text-lg font-bold text-gray-800">
                   Đánh giá bạn nhận được
                 </h3>
@@ -188,11 +189,8 @@ const ViewFeedbackModal = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 mb-3">
-                  {renderStars(feedbackReceived.rating)}
-                  <span className="text-sm font-semibold text-gray-700">
-                    {getRatingText(feedbackReceived.rating)}
-                  </span>
+                <div className="mb-3">
+                  {renderRatingBadge(feedbackReceived.rating)}
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-3">
