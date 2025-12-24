@@ -311,13 +311,58 @@ const Home = () => {
             <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mb-3 sm:mb-0 text-gray-800">
               SẢN PHẨM <span className="text-yellow-600">ĐANG ĐẤU GIÁ</span>
             </h2>
-            <button className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium">
+            <button 
+              onClick={() => navigate('/auctions')}
+              className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium"
+            >
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {activeProducts.slice(0, 12).map((product) => (
-              <ProductCard key={product.id} {...product} />
+              <div
+                key={product.id}
+                className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
+                onClick={() => navigate(`/product/${product.id}`)}
+              >
+                {/* Image */}
+                <div className="relative overflow-hidden">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  {product.endTime && (
+                    <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                      ⏰ Đang diễn ra
+                    </div>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="p-4">
+                  <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                    {product.name}
+                  </h3>
+
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500">Giá hiện tại</p>
+                    <p className="text-xl font-bold text-purple-600">{product.currentPrice}</p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/product/${product.id}`);
+                      }}
+                      className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
+                    >
+                      Đặt giá
+                    </button>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </section>
@@ -328,30 +373,56 @@ const Home = () => {
             <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mb-3 sm:mb-0 text-gray-800">
               SẢN PHẨM <span className="text-amber-600">SẮP ĐẤU GIÁ</span> ({upcomingProducts.length})
             </h2>
-            <button className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium">
+            <button 
+              onClick={() => navigate('/auctions')}
+              className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium"
+            >
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {upcomingProducts.slice(0, 12).map((product) => (
-              <ProductCard key={product.id} {...product} />
-            ))}
-          </div>
-        </section>
+              <div
+                key={product.id}
+                className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
+                onClick={() => navigate(`/product/${product.id}`)}
+              >
+                {/* Image */}
+                <div className="relative overflow-hidden">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute top-3 right-3 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                    🕒 Sắp diễn ra
+                  </div>
+                </div>
 
-        {/* Featured Products Section */}
-        <section className="mb-8 sm:mb-10 lg:mb-16">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 lg:mb-8">
-            <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mb-3 sm:mb-0 text-gray-800">
-              SẢN PHẨM <span className="text-orange-600">NỔI BẬT</span> ({featuredProducts.length})
-            </h2>
-            <button className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium">
-              Xem tất cả
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
-            {featuredProducts.slice(0, 12).map((product) => (
-              <ProductCard key={product.id} {...product} />
+                {/* Content */}
+                <div className="p-4">
+                  <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                    {product.name}
+                  </h3>
+
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500">Giá khởi điểm</p>
+                    <p className="text-xl font-bold text-purple-600">{product.currentPrice}</p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/product/${product.id}`);
+                      }}
+                      className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all"
+                    >
+                      Xem chi tiết
+                    </button>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </section>
