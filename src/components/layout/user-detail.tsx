@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   User, Mail, Phone, MapPin, Calendar, Award, 
   TrendingUp, ShoppingBag, Heart, Star, Trophy,
-  Clock, DollarSign, Package, CheckCircle, ArrowLeft, Loader2
+  Clock, DollarSign, Package, CheckCircle, ArrowLeft, Loader2, Store
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -216,6 +216,18 @@ const UserDetail = () => {
                     <div className="text-2xl font-bold text-green-600">{userStats.successRate}%</div>
                     <div className="text-xs text-gray-600">Tỷ lệ thắng</div>
                   </div>
+                </div>
+
+                {/* Seller Dashboard Button */}
+                <div className="mt-6 flex justify-center md:justify-start">
+                  <button
+                    onClick={() => navigate('/seller/dashboard')}
+                    className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-bold px-8 py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                  >
+                    <Store className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
+                    <span className="text-lg">Quản lý đấu giá</span>
+                    <div className="absolute inset-0 bg-white/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </button>
                 </div>
               </div>
 
