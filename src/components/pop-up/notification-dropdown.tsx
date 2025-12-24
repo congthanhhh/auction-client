@@ -2,43 +2,8 @@ import { Bell, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
-
-// Mock Notification Type
-interface NotificationResponse {
-  id: number;
-  message: string;
-  type: 'AUCTION' | 'SYSTEM' | 'PAYMENT';
-  isRead: boolean;
-  createdAt: string;
-  link?: string;
-}
-
-// Mock Data - 10 thông báo gần nhất
-const MOCK_NOTIFICATIONS: NotificationResponse[] = [
-  {
-    id: 1,
-    message: "Bạn đã thắng đấu giá iPhone 15 Pro Max với giá 28.500.000đ",
-    type: "AUCTION",
-    isRead: false,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    link: "/auction/101",
-  },
-  {
-    id: 2,
-    message: "Phiên đấu giá MacBook Pro M3 sẽ bắt đầu trong 30 phút nữa",
-    type: "AUCTION",
-    isRead: false,
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    link: "/auction/102",
-  },
-  {
-    id: 3,
-    message: "Hệ thống sẽ bảo trì từ 00:00 - 02:00 ngày mai",
-    type: "SYSTEM",
-    isRead: true,
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+import { useNotificationStore } from "@/stores/useNotificationStore";
+import { useEffect } from "react";
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -48,10 +13,29 @@ interface NotificationDropdownProps {
 const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownProps) => {
   const navigate = useNavigate();
 
-  // Calculate unread count
-  const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.isRead).length;
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    fetchNotifications,
+    fetchUnreadCount,
+    markAsRead
+  } = useNotificationStore();
 
-  const handleNotificationClick = (notif: NotificationResponse) => {
+  // Fetch notifications khi dropdown mở
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications(1, 10); // Lấy 10 thông báo đầu tiên
+    }
+  }, [isOpen, fetchNotifications]);
+
+  const handleNotificationClick = async (notif: { id: number; link: string; isRead: boolean }) => {
+    // Đánh dấu đã đọc nếu chưa đọc
+    if (!notif.isRead) {
+      await markAsRead(notif.id);
+      fetchUnreadCount(); // Cập nhật lại unread count
+    }
+
     // Navigate nếu có link
     if (notif.link) {
       navigate(notif.link);
@@ -95,37 +79,39 @@ const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownProps) =>
 
         {/* Notification List */}
         <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-          {MOCK_NOTIFICATIONS.length === 0 ? (
+          {isLoading ? (
+            <div className="py-12 text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-3"></div>
+              <p className="text-gray-500 text-sm">Đang tải thông báo...</p>
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="py-12 text-center">
               <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 text-sm">Chưa có thông báo nào</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {MOCK_NOTIFICATIONS.map((notif) => (
+              {notifications.map((notif) => (
                 <div
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`px-4 py-3 cursor-pointer transition-all hover:bg-blue-50 ${
-                    !notif.isRead ? "bg-blue-50/50" : "bg-white"
-                  }`}
+                  className={`px-4 py-3 cursor-pointer transition-all hover:bg-blue-50 ${!notif.isRead ? "bg-blue-50/50" : "bg-white"
+                    }`}
                 >
                   <div className="flex items-start space-x-3">
                     {/* Icon indicator */}
                     <div
-                      className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${
-                        !notif.isRead ? "bg-blue-600" : "bg-gray-300"
-                      }`}
+                      className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${!notif.isRead ? "bg-blue-600" : "bg-gray-300"
+                        }`}
                     />
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <p
-                        className={`text-sm leading-relaxed ${
-                          !notif.isRead
+                        className={`text-sm leading-relaxed ${!notif.isRead
                             ? "text-gray-900 font-medium"
                             : "text-gray-600"
-                        }`}
+                          }`}
                       >
                         {notif.message}
                       </p>

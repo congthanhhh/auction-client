@@ -1,9 +1,10 @@
 import { Search, ShoppingCart, User, Menu, ChevronDown, LogOut, Bell, Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginDialog from "../pop-up/login";
 import RegisterDialog from "../pop-up/register";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useNotificationStore } from "@/stores/useNotificationStore";
 import { toast } from "sonner";
 import NotificationDropdown from "../pop-up/notification-dropdown";
 
@@ -21,10 +22,24 @@ const Header = () => {
   const navigate = useNavigate();
 
   const { currentUser, logout } = useAuthStore();
-  
+  const { unreadCount, fetchUnreadCount } = useNotificationStore();
+
   // Mock data cho giao diện tĩnh
-  const unreadCount = 2;
   const cartItemsCount = 5;
+
+  // Fetch unread count khi component mount và khi user đăng nhập
+  useEffect(() => {
+    if (currentUser) {
+      fetchUnreadCount();
+
+      // Poll unread count mỗi 30 giây
+      const interval = setInterval(() => {
+        fetchUnreadCount();
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [currentUser, fetchUnreadCount]);
   const handleLogout = async () => {
     await logout();
     toast.success('Đăng xuất thành công', {
@@ -127,7 +142,7 @@ const Header = () => {
               </span>
             </button>
 
-            <button 
+            <button
               onClick={() => navigate('/cart')}
               className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded relative"
             >
@@ -145,7 +160,7 @@ const Header = () => {
             </button>
 
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
                 className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded"
               >
@@ -161,9 +176,9 @@ const Header = () => {
                   Thông báo
                 </span>
               </button>
-              <NotificationDropdown 
-                isOpen={showNotificationDropdown} 
-                onClose={() => setShowNotificationDropdown(false)} 
+              <NotificationDropdown
+                isOpen={showNotificationDropdown}
+                onClose={() => setShowNotificationDropdown(false)}
               />
             </div>
 
@@ -232,7 +247,7 @@ const Header = () => {
             </h1>
 
             <div className="flex items-center space-x-3">
-              <button 
+              <button
                 onClick={() => navigate('/cart')}
                 className="text-white hover:text-gray-300 transition-colors relative"
               >
@@ -244,7 +259,7 @@ const Header = () => {
                 )}
               </button>
               <div className="relative">
-                <button 
+                <button
                   onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
                   className="text-white hover:text-gray-300 transition-colors relative"
                 >
@@ -255,9 +270,9 @@ const Header = () => {
                     </span>
                   )}
                 </button>
-                <NotificationDropdown 
-                  isOpen={showNotificationDropdown} 
-                  onClose={() => setShowNotificationDropdown(false)} 
+                <NotificationDropdown
+                  isOpen={showNotificationDropdown}
+                  onClose={() => setShowNotificationDropdown(false)}
                 />
               </div>
               <button
