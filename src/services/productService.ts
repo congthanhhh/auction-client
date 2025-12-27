@@ -14,6 +14,11 @@ export const productService = {
         return axiosClient.get<ProductListResponse>('/products', { params });
     },
 
+    // GET my products (seller's products)
+    getMyProducts() {
+        return axiosClient.get<Product[]>('/products/my-products');
+    },
+
     // POST create product
     createProduct(data: CreateProductRequest) {
         return axiosClient.post<CreateProductResponse>('/products', data);

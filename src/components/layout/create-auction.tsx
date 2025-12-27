@@ -1,584 +1,484 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Upload, X, Plus, Package, DollarSign, Calendar, Tag, Info, CheckCircle, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Calendar, DollarSign, Package, Loader2, CheckCircle, Search } from 'lucide-react';
 import PageLayout from './page-layout';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/stores/useAuthStore';
-import { useCreateAuctionStore } from '@/stores/useCreateAuctionStore';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { auctionService } from '@/services/auctionService';
+import { productService } from '@/services/productService';
 import { toast } from 'sonner';
+import type { CreateAuctionSessionRequest } from '@/types/auction';
+import type { CreateProductResponse, Product } from '@/types/product';
 
 const CreateAuction = () => {
   const navigate = useNavigate();
-  
-  // Auth check
-  const { isAuthenticated } = useAuthStore();
-  
-  // Zustand store cho tạo auction
-  const {
-    currentStep,
-    createdProduct,
-    categories,
-    isCreatingProduct,
-    isCreatingSession,
-    isFetchingCategories,
-    error,
-    fetchCategories,
-    createProduct,
-    createAuctionSession,
-    goToPreviousStep,
-    clearError,
-    reset
-  } = useCreateAuctionStore();
-  
-  const [images, setImages] = useState<string[]>([]);
-  
-  // Step 1: Product form data
-  const [productForm, setProductForm] = useState({
-    name: '',
-    description: '',
-    startPrice: '',
-    categoryId: '',
-    attributes: [] as string[],
-  });
+  const location = useLocation();
 
-  // Step 2: Auction session form data
-  const [sessionForm, setSessionForm] = useState({
+  const [product, setProduct] = useState<CreateProductResponse | null>(null);
+  const [myProducts, setMyProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showProductSelector, setShowProductSelector] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Form data for auction session
+  const [auctionData, setAuctionData] = useState({
     startTime: '',
     endTime: '',
     reservePrice: '',
     buyNowPrice: '',
   });
 
-  // Attributes input
-  const [attributeKey, setAttributeKey] = useState('');
-  const [attributeValue, setAttributeValue] = useState('');
-
-  // Check authentication
+  // Check if product is passed from create-product page
   useEffect(() => {
-    if (!isAuthenticated) {
-      toast.error('Vui lòng đăng nhập để tạo phiên đấu giá');
-      navigate('/');
+    if (location.state?.product) {
+      setProduct(location.state.product);
+      setShowProductSelector(false);
+    } else {
+      // Show product selector if no product is provided
+      setShowProductSelector(true);
+      fetchMyProducts();
+    }
+  }, [location.state]);
+
+  // Fetch user's products
+  const fetchMyProducts = async () => {
+    try {
+      setIsLoadingProducts(true);
+      const response = await productService.getMyProducts();
+      setMyProducts(response.data);
+    } catch (error: any) {
+      console.error('Error fetching products:', error);
+      toast.error('Không thể tải danh sách sản phẩm');
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  };
+
+  // Handle product selection
+  const handleSelectProduct = (selectedProduct: Product) => {
+    setProduct(selectedProduct as CreateProductResponse);
+    setShowProductSelector(false);
+  };
+
+  // Filter products by search query
+  const filteredProducts = myProducts.filter(p =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.category.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Handle auction session submit
+  const handleAuctionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!product) {
+      toast.error('Không tìm thấy thông tin sản phẩm');
       return;
     }
-    
-    // Fetch categories khi mount
-    fetchCategories();
-    
-    // Reset store khi unmount
-    return () => reset();
-  }, [isAuthenticated, navigate, fetchCategories, reset]);
 
-  // Handle error từ store
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      clearError();
+    // Validation
+    if (!auctionData.startTime) {
+      toast.error('Vui lòng chọn thời gian bắt đầu');
+      return;
     }
-  }, [error, clearError]);
 
-  // Format số tiền với dấu chấm
-  const formatPrice = (value: string) => {
-    const numericValue = value.replace(/\./g, '');
-    if (!/^\d*$/.test(numericValue)) return value;
-    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  };
-
-  const handlePriceChange = (field: 'startPrice' | 'reservePrice' | 'buyNowPrice', value: string) => {
-    const formatted = formatPrice(value);
-    if (field === 'startPrice') {
-      setProductForm({...productForm, startPrice: formatted});
-    } else {
-      setSessionForm({...sessionForm, [field]: formatted});
+    if (!auctionData.endTime) {
+      toast.error('Vui lòng chọn thời gian kết thúc');
+      return;
     }
-  };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const newImages = Array.from(files).map(file => URL.createObjectURL(file));
-      setImages([...images, ...newImages].slice(0, 9));
+    const startTime = new Date(auctionData.startTime);
+    const endTime = new Date(auctionData.endTime);
+    const now = new Date();
+
+    if (startTime <= now) {
+      toast.error('Thời gian bắt đầu phải trong tương lai');
+      return;
     }
-  };
 
-  const removeImage = (index: number) => {
-    setImages(images.filter((_: string, i: number) => i !== index));
-  };
-
-  // Add attribute
-  const addAttribute = () => {
-    if (attributeKey.trim() && attributeValue.trim()) {
-      setProductForm({
-        ...productForm,
-        attributes: [...productForm.attributes, attributeKey.trim(), attributeValue.trim()]
-      });
-      setAttributeKey('');
-      setAttributeValue('');
+    if (endTime <= startTime) {
+      toast.error('Thời gian kết thúc phải sau thời gian bắt đầu');
+      return;
     }
-  };
 
-  const removeAttribute = (index: number) => {
-    const newAttributes = [...productForm.attributes];
-    newAttributes.splice(index, 2); // Remove key-value pair
-    setProductForm({...productForm, attributes: newAttributes});
-  };
+    const daysDiff = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysDiff < 1) {
+      toast.error('Phiên đấu giá phải kéo dài ít nhất 1 ngày');
+      return;
+    }
 
-  // Step 1: Submit Product
-  const handleProductSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Convert attributes array to JSON string for database
-    // Database expects JSON array: ["Màu sắc", "Đen", "Dung lượng", "256GB"]
-    const attributesJson = JSON.stringify(productForm.attributes);
-    
-    const success = await createProduct({
-      name: productForm.name,
-      description: productForm.description,
-      startPrice: parseInt(productForm.startPrice.replace(/\./g, '')),
-      categoryId: parseInt(productForm.categoryId),
-      attributes: attributesJson,
-      imageIds: null
-    });
+    if (!auctionData.buyNowPrice || Number(auctionData.buyNowPrice) <= 0) {
+      toast.error('Giá mua ngay phải lớn hơn 0');
+      return;
+    }
 
-    if (success) {
-      toast.success('Tạo sản phẩm thành công! Tiếp tục tạo phiên đấu giá.');
+    if (Number(auctionData.buyNowPrice) <= product.startPrice) {
+      toast.error('Giá mua ngay phải lớn hơn giá khởi điểm');
+      return;
+    }
+
+    // Validate reserve price if provided (> 0)
+    if (auctionData.reservePrice && Number(auctionData.reservePrice) > 0) {
+      if (Number(auctionData.reservePrice) <= product.startPrice) {
+        toast.error('Giá sàn phải lớn hơn giá khởi điểm');
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+    try {
+      const auctionRequest: CreateAuctionSessionRequest = {
+        productId: product.id,
+        startTime: auctionData.startTime,
+        endTime: auctionData.endTime,
+        reservePrice: auctionData.reservePrice && Number(auctionData.reservePrice) > 0
+          ? Number(auctionData.reservePrice)
+          : 0,
+        buyNowPrice: Number(auctionData.buyNowPrice),
+      };
+
+      const response = await auctionService.createAuctionSession(auctionRequest);
+
+      // If has paymentUrl, redirect to VNPay
+      if (response.data.paymentUrl) {
+        toast.success('Chuyển đến trang thanh toán...');
+        window.location.href = response.data.paymentUrl;
+      } else {
+        // No payment needed
+        toast.success('Tạo phiên đấu giá thành công!');
+        navigate('/seller/dashboard');
+      }
+    } catch (error: any) {
+      console.error('Error creating auction session:', error);
+      toast.error(error.response?.data?.message || 'Tạo phiên đấu giá thất bại');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Step 2: Submit Auction Session
-  const handleSessionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const success = await createAuctionSession({
-      startTime: sessionForm.startTime,
-      endTime: sessionForm.endTime,
-      reservePrice: parseInt(sessionForm.reservePrice.replace(/\./g, '')),
-      buyNowPrice: parseInt(sessionForm.buyNowPrice.replace(/\./g, ''))
-    });
-
-    if (success) {
-      toast.success('Tạo phiên đấu giá thành công!');
-      setTimeout(() => {
-        navigate('/'); // Redirect về home
-      }, 1500);
-    }
+  // Format number to VND
+  const formatNumber = (value: string) => {
+    return value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(price);
+  };
+
+  const handleAuctionPriceChange = (field: 'reservePrice' | 'buyNowPrice', value: string) => {
+    const numValue = value.replace(/\D/g, '');
+    setAuctionData({ ...auctionData, [field]: numValue });
+  };
+
+  // Product Selector UI
+  if (showProductSelector) {
+    return (
+      <PageLayout>
+        <div className="bg-gray-50 min-h-screen py-6">
+          <div className="max-w-5xl mx-auto px-4">
+            {/* Header */}
+            <button
+              onClick={() => navigate(-1)}
+              className="mb-6 flex items-center gap-3 bg-white hover:bg-yellow-50 text-gray-800 font-medium px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200"
+            >
+              <ArrowLeft size={20} className="text-yellow-600" />
+              <span>Quay lại</span>
+            </button>
+
+            {/* Product Selection */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                  <Package className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Chọn sản phẩm đấu giá</h1>
+                  <p className="text-sm text-gray-600">Chọn sản phẩm bạn muốn tạo phiên đấu giá</p>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm sản phẩm..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Products List */}
+              {isLoadingProducts ? (
+                <div className="text-center py-12">
+                  <Loader2 className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
+                  <p className="text-gray-600">Đang tải sản phẩm...</p>
+                </div>
+              ) : (
+                <>
+                  {filteredProducts.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-4">
+                        {myProducts.length === 0 ? 'Bạn chưa có sản phẩm nào' : 'Không tìm thấy sản phẩm'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      {filteredProducts.map((prod) => (
+                        <div
+                          key={prod.id}
+                          onClick={() => handleSelectProduct(prod)}
+                          className="flex gap-4 p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 cursor-pointer transition-all group"
+                        >
+                          {prod.images && prod.images[0] && (
+                            <img
+                              src={prod.images[0].url}
+                              alt={prod.name}
+                              className="w-24 h-24 object-cover rounded-lg"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-800 group-hover:text-purple-600 mb-1">
+                              {prod.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{prod.description}</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-purple-600">
+                                Giá khởi điểm: {formatPrice(prod.startPrice)}
+                              </p>
+                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                {prod.category.name}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Always show Create Product button */}
+                  <div className="text-center pt-4 border-t border-gray-200">
+                    <Button
+                      onClick={() => navigate('/create-product')}
+                      className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+                    >
+                      + Tạo sản phẩm mới
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // Loading state
+  if (isLoadingProducts) {
+    return (
+      <PageLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-16 h-16 animate-spin text-blue-500 mx-auto mb-4" />
+            <p className="text-lg text-gray-600">Đang tải thông tin sản phẩm...</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // No product selected
+  if (!product) {
+    return (
+      <PageLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-lg text-gray-600 mb-4">Không tìm thấy sản phẩm</p>
+            <Button onClick={() => setShowProductSelector(true)}>
+              Chọn sản phẩm
+            </Button>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
       <div className="bg-gray-50 min-h-screen py-6">
         <div className="max-w-5xl mx-auto px-4">
-          
+
           {/* Header */}
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(-1)}
             className="mb-6 flex items-center gap-3 bg-white hover:bg-yellow-50 text-gray-800 font-medium px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200"
           >
             <ArrowLeft size={20} className="text-yellow-600" />
-            <span>Trở về trang chủ</span>
+            <span>Quay lại</span>
           </button>
 
-          {/* Progress Steps */}
-          <div className="mb-6 bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-center gap-8">
-              <div className="flex items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                  currentStep === 1 
-                    ? 'bg-orange-500 text-white' 
-                    : 'bg-green-500 text-white'
-                }`}>
-                  {currentStep === 1 ? '1' : <CheckCircle className="w-6 h-6" />}
-                </div>
-                <span className={`font-semibold ${currentStep === 1 ? 'text-orange-600' : 'text-green-600'}`}>
-                  Tạo sản phẩm
-                </span>
+          {/* Create Auction Session */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-white" />
               </div>
-
-              <div className={`h-1 w-20 ${currentStep === 2 ? 'bg-orange-500' : 'bg-gray-300'}`} />
-
-              <div className="flex items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                  currentStep === 2 
-                    ? 'bg-orange-500 text-white' 
-                    : 'bg-gray-300 text-gray-600'
-                }`}>
-                  2
-                </div>
-                <span className={`font-semibold ${currentStep === 2 ? 'text-orange-600' : 'text-gray-500'}`}>
-                  Tạo phiên đấu giá
-                </span>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Tạo phiên đấu giá</h1>
+                <p className="text-sm text-gray-600">
+                  Sản phẩm: <strong>{product.name}</strong>
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Step 1: Create Product */}
-          {currentStep === 1 && (
-            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
-                  <Package className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Bước 1: Tạo sản phẩm</h1>
-                  <p className="text-sm text-gray-600">Điền thông tin về sản phẩm của bạn</p>
+            <form onSubmit={handleAuctionSubmit} className="space-y-6">
+
+              {/* Product Preview */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
+                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  Thông tin sản phẩm
+                </h3>
+                <div className="flex gap-4">
+                  {product.images && product.images[0] && (
+                    <img
+                      src={product.images[0].url}
+                      alt={product.name}
+                      className="w-24 h-24 object-cover rounded-lg"
+                    />
+                  )}
+                  <div className="flex-1 space-y-2 text-sm">
+                    <p><strong>Tên:</strong> {product.name}</p>
+                    <p><strong>Giá khởi điểm:</strong> {formatPrice(product.startPrice)}</p>
+                    <p><strong>Danh mục:</strong> {product.category.name}</p>
+                  </div>
                 </div>
               </div>
 
-              <form onSubmit={handleProductSubmit} className="space-y-6">
-                
-                {/* Hình ảnh sản phẩm */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Hình ảnh sản phẩm <span className="text-red-500">*</span>
-                    <span className="text-gray-500 font-normal ml-2">({images.length}/9)</span>
-                  </label>
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    {images.map((img: string, index: number) => (
-                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 group">
-                        <img src={img} alt={`Product ${index + 1}`} className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                        {index === 0 && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-orange-500 text-white text-xs text-center py-1">
-                            Ảnh bìa
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {images.length < 9 && (
-                      <label className="aspect-square rounded-lg border-2 border-dashed border-gray-300 hover:border-orange-500 flex flex-col items-center justify-center cursor-pointer transition-colors bg-gray-50 hover:bg-orange-50">
-                        <Upload className="w-8 h-8 text-gray-400 mb-1" />
-                        <span className="text-xs text-gray-600">Thêm ảnh</span>
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                      </label>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    <Info className="w-3 h-3 inline mr-1" />
-                    Ảnh đầu tiên sẽ là ảnh bìa. Tối đa 9 ảnh.
-                  </p>
-                </div>
+              {/* Thời gian */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-4">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  Thời gian đấu giá
+                </h3>
 
-                {/* Thông tin sản phẩm */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <Tag className="w-5 h-5 text-orange-600" />
-                    Thông tin sản phẩm
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tên sản phẩm <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={productForm.name}
-                        onChange={(e) => setProductForm({...productForm, name: e.target.value})}
-                        placeholder="Ví dụ: iPhone 15 Pro Max 256GB"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Danh mục <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={productForm.categoryId}
-                        onChange={(e) => setProductForm({...productForm, categoryId: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                        required
-                        disabled={isFetchingCategories}
-                      >
-                        <option value="">
-                          {isFetchingCategories ? 'Đang tải...' : 'Chọn danh mục'}
-                        </option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Mô tả chi tiết <span className="text-red-500">*</span>
+                      Thời gian bắt đầu <span className="text-red-500">*</span>
                     </label>
-                    <textarea
-                      value={productForm.description}
-                      onChange={(e) => setProductForm({...productForm, description: e.target.value})}
-                      placeholder="Mô tả chi tiết về sản phẩm, tình trạng, xuất xứ..."
-                      rows={5}
+                    <input
+                      type="datetime-local"
+                      value={auctionData.startTime}
+                      onChange={(e) => setAuctionData({ ...auctionData, startTime: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       required
                     />
+                    <p className="text-xs text-gray-500 mt-1">Phải trong tương lai</p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Giá khởi điểm <span className="text-red-500">*</span>
+                      Thời gian kết thúc <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={auctionData.endTime}
+                      onChange={(e) => setAuctionData({ ...auctionData, endTime: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Ít nhất 1 ngày sau thời gian bắt đầu</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Giá */}
+              <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-4">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                  Thông tin giá
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Giá sàn (Reserve Price) <span className="text-gray-500 font-normal">(Tùy chọn)</span>
                     </label>
                     <div className="relative">
                       <input
                         type="text"
-                        value={productForm.startPrice}
-                        onChange={(e) => handlePriceChange('startPrice', e.target.value)}
+                        value={formatNumber(auctionData.reservePrice)}
+                        onChange={(e) => handleAuctionPriceChange('reservePrice', e.target.value)}
+                        placeholder="Để trống nếu không cần giá sàn"
+                        className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₫</span>
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-gray-600">
+                        📌 Giá tối thiểu bạn chấp nhận bán
+                      </p>
+                      {auctionData.reservePrice && Number(auctionData.reservePrice) > 0 ? (
+                        <p className="text-xs text-orange-600 font-semibold">
+                          ⚠️ Có giá sàn → Cần thanh toán phí qua VNPay
+                        </p>
+                      ) : (
+                        <p className="text-xs text-green-600 font-semibold">
+                          ✓ Không có giá sàn → Không cần thanh toán phí
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Giá mua ngay (Buy Now) <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formatNumber(auctionData.buyNowPrice)}
+                        onChange={(e) => handleAuctionPriceChange('buyNowPrice', e.target.value)}
                         placeholder="0"
                         className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         required
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₫</span>
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">Người mua có thể mua ngay với giá này</p>
                   </div>
-
-                  {/* Attributes */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Thuộc tính sản phẩm
-                    </label>
-                    
-                    {/* Display existing attributes */}
-                    {productForm.attributes.length > 0 && (
-                      <div className="mb-3 space-y-2">
-                        {productForm.attributes.reduce((acc: React.ReactElement[], attr: string, i: number) => {
-                          if (i % 2 === 0) {
-                            acc.push(
-                              <div key={i} className="flex items-center gap-2 bg-gray-100 p-2 rounded">
-                                <span className="font-medium">{attr}:</span>
-                                <span>{productForm.attributes[i + 1]}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => removeAttribute(i)}
-                                  className="ml-auto text-red-500 hover:text-red-700"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            );
-                          }
-                          return acc;
-                        }, [])}
-                      </div>
-                    )}
-
-                    {/* Add new attribute */}
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={attributeKey}
-                        onChange={(e) => setAttributeKey(e.target.value)}
-                        placeholder="Tên thuộc tính (vd: Màu sắc)"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                      />
-                      <input
-                        type="text"
-                        value={attributeValue}
-                        onChange={(e) => setAttributeValue(e.target.value)}
-                        placeholder="Giá trị (vd: Đen)"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                      />
-                      <Button
-                        type="button"
-                        onClick={addAttribute}
-                        variant="outline"
-                        className="px-4"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Ví dụ: Màu sắc - Đen, Dung lượng - 256GB
-                    </p>
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <div className="flex gap-4 pt-4 border-t">
-                  <Button
-                    type="button"
-                    onClick={() => navigate('/')}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Hủy
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white text-lg py-6 font-bold shadow-lg"
-                    disabled={isCreatingProduct}
-                  >
-                    {isCreatingProduct ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Đang tạo...
-                      </>
-                    ) : (
-                      'Tiếp tục →'
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* Step 2: Create Auction Session */}
-          {currentStep === 2 && (
-            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-600 rounded-xl flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Bước 2: Tạo phiên đấu giá</h1>
-                  <p className="text-sm text-gray-600">
-                    Sản phẩm: <strong>{createdProduct?.name}</strong>
-                  </p>
                 </div>
               </div>
 
-              <form onSubmit={handleSessionSubmit} className="space-y-6">
-                
-                {/* Thời gian */}
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-4">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                    Thời gian đấu giá
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Thời gian bắt đầu <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={sessionForm.startTime}
-                        onChange={(e) => setSessionForm({...sessionForm, startTime: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Thời gian tương lai (YYYY-MM-DDTHH:mm:ss)</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Thời gian kết thúc <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={sessionForm.endTime}
-                        onChange={(e) => setSessionForm({...sessionForm, endTime: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Sau thời gian bắt đầu ít nhất 1 ngày</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Giá */}
-                <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-4">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                    Thông tin giá
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Giá dự sản (Reserve Price) <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={sessionForm.reservePrice}
-                          onChange={(e) => handlePriceChange('reservePrice', e.target.value)}
-                          placeholder="0"
-                          className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                          required
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₫</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Giá tối thiểu bạn chấp nhận bán</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Giá mua ngay (Buy Now) <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={sessionForm.buyNowPrice}
-                          onChange={(e) => handlePriceChange('buyNowPrice', e.target.value)}
-                          placeholder="0"
-                          className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                          required
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₫</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Người mua có thể mua ngay với giá này</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Product Preview */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-                  <h3 className="font-semibold text-gray-800 mb-3">Thông tin sản phẩm</h3>
-                  <div className="space-y-2 text-sm">
-                    <p><strong>Tên:</strong> {createdProduct?.name}</p>
-                    <p><strong>Mô tả:</strong> {createdProduct?.description}</p>
-                    <p><strong>Giá khởi điểm:</strong> {createdProduct?.startPrice.toLocaleString('vi-VN')} ₫</p>
-                    <p><strong>Danh mục:</strong> {createdProduct?.category.name}</p>
-                    {createdProduct?.attributes && (
-                      <p><strong>Thuộc tính:</strong> {createdProduct.attributes}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Submit Buttons */}
-                <div className="flex gap-4 pt-4 border-t">
-                  <Button
-                    type="button"
-                    onClick={goToPreviousStep}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isCreatingSession}
-                  >
-                    ← Quay lại
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white text-lg py-6 font-bold shadow-lg"
-                    disabled={isCreatingSession}
-                  >
-                    {isCreatingSession ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Đang tạo phiên...
-                      </>
-                    ) : (
-                      'Đăng phiên đấu giá'
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          )}
+              {/* Submit Buttons */}
+              <div className="flex gap-4 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowProductSelector(true)}
+                >
+                  ← Chọn sản phẩm khác
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white text-lg py-6 font-bold shadow-lg"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Đang xử lý...' : 'Đăng phiên đấu giá'}
+                </Button>
+              </div>
+            </form>
+          </div>
 
         </div>
       </div>

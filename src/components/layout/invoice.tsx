@@ -1,4 +1,5 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Download,
@@ -15,9 +16,12 @@ import {
   Truck,
   PackageCheck,
   Copy,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PageLayout from './page-layout';
+import { invoiceService } from '@/services/invoiceService';
+import type { InvoiceResponse } from '@/types/invoice';
 
 // Tracking timeline steps (4 steps as per requirement)
 interface TrackingStep {
@@ -27,72 +31,36 @@ interface TrackingStep {
   completed: boolean;
 }
 
-// Mock invoice data
-const MOCK_INVOICE = {
-  invoiceNumber: 'INV-2024-001234',
-  orderNumber: 'ORD-2024-5678',
-  issueDate: '2024-12-20T10:30:00Z',
-  paymentDate: '2024-12-20T10:35:00Z',
-  status: 'PAID',
-  
-  // Shipping tracking info
-  trackingCode: 'AQUILAS366771120YQ',
-  shippingCarrier: 'Giao Hàng Nhanh',
-  shippingStatus: 'delivered', // accepted, in_transit, out_for_delivery, delivered
-  trackingTimeline: [
-    { id: 1, label: 'Accepted', date: 'Nov 7, 2020\n4:50am', completed: true },
-    { id: 2, label: 'In transit', date: 'Nov 7, 2020\n7:21am', completed: true },
-    { id: 3, label: 'Out for delivery', date: 'Nov 7, 2020\n11:11am', completed: true },
-    { id: 4, label: 'Delivered', date: 'Nov 7, 2020\n6:14pm', completed: true },
-  ] as TrackingStep[],
-  
-  company: {
-    name: 'Auction Website',
-    address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-    phone: '(028) 1234 5678',
-    email: 'support@auction.vn',
-    taxCode: '0123456789',
-  },
-  
-  buyer: {
-    name: 'Nguyễn Văn A',
-    email: 'nguyenvana@email.com',
-    phone: '0912345678',
-    address: '456 Đường XYZ, Quận 7, TP.HCM',
-  },
-  
-  seller: {
-    name: 'Trần Thị B',
-    email: 'tranthib@email.com',
-    phone: '0901234567',
-    address: '123 Đường ABC, Quận 1, TP.HCM',
-  },
-  
-  product: {
-    id: 1,
-    name: 'iPad Air M2 11 inch',
-    imageUrl: 'https://via.placeholder.com/120',
-    description: 'Chip M2, 128GB, WiFi',
-    quantity: 1,
-    price: 15000000,
-  },
-  
-  payment: {
-    method: 'PayPal',
-    transactionId: 'TXN-2024-ABC123XYZ',
-    shippingFee: 30000,
-    serviceFee: 250000,
-    subtotal: 15000000,
-    total: 15280000,
-  },
-};
-
 const Invoice = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  
-  // In real app, get from location.state or API
-  const invoice = location.state?.invoice || MOCK_INVOICE;
+  const { invoiceId } = useParams<{ invoiceId: string }>();
+
+  const [invoice, setInvoice] = useState<InvoiceResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInvoice = async () => {
+      if (!invoiceId) {
+        toast.error('Không tìm thấy ID hóa đơn');
+        navigate('/');
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await invoiceService.getInvoiceById(Number(invoiceId));
+        setInvoice(response.data);
+      } catch (error: any) {
+        console.error('Error fetching invoice:', error);
+        toast.error(error.response?.data?.message || 'Không thể tải thông tin hóa đơn');
+        navigate('/');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInvoice();
+  }, [invoiceId, navigate]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -121,12 +89,60 @@ const Invoice = () => {
     // In real app, generate and download PDF
   };
 
-  const copyTrackingCode = () => {
-    if (invoice.trackingCode) {
-      navigator.clipboard.writeText(invoice.trackingCode);
-      toast.success('Đã sao chép mã vận đơn!');
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'OVERDUE':
+        return 'bg-red-100 text-red-800 border-red-300';
+      case 'CANCELLED':
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+      default:
+        return 'bg-blue-100 text-blue-800 border-blue-300';
     }
   };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return 'Đã thanh toán';
+      case 'PENDING':
+        return 'Chờ thanh toán';
+      case 'OVERDUE':
+        return 'Quá hạn';
+      case 'CANCELLED':
+        return 'Đã hủy';
+      default:
+        return status;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-16 h-16 animate-spin text-blue-500 mx-auto mb-4" />
+            <p className="text-lg text-gray-600">Đang tải hóa đơn...</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <PageLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg text-gray-600">Không tìm thấy hóa đơn</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
@@ -140,7 +156,7 @@ const Invoice = () => {
             <ArrowLeft size={20} />
             <span className="text-sm md:text-base">Quay lại</span>
           </button>
-          
+
           <div className="flex gap-2 md:gap-3 w-full sm:w-auto">
             <button
               onClick={handleDownload}
@@ -169,115 +185,67 @@ const Invoice = () => {
                 <p className="text-blue-100 text-xs md:text-sm">Hóa đơn thanh toán đấu giá</p>
               </div>
               <div className="text-left sm:text-right w-full sm:w-auto">
-                <div className="bg-white/20 px-3 md:px-4 py-2 rounded-lg inline-flex items-center gap-2 mb-2">
+                <div className={`px-3 md:px-4 py-2 rounded-lg inline-flex items-center gap-2 mb-2 ${getStatusColor(invoice.status)}`}>
                   <CheckCircle size={18} className="md:w-5 md:h-5" />
-                  <span className="font-semibold text-sm md:text-base">Đã thanh toán</span>
+                  <span className="font-semibold text-sm md:text-base">{getStatusText(invoice.status)}</span>
                 </div>
-                <p className="text-blue-100 text-xs md:text-sm">Mã: {invoice.invoiceNumber}</p>
+                <p className="text-blue-100 text-xs md:text-sm">Mã: INV-{invoice.id}</p>
               </div>
             </div>
           </div>
 
-          {/* Company & Order Info */}
+          {/* Invoice Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 px-4 sm:px-6 md:px-8 py-4 md:py-6 border-b">
-            {/* Company Info */}
+            {/* Invoice Details */}
             <div>
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm md:text-base">
-                <Building size={16} className="text-blue-600 md:w-5 md:h-5" />
-                Thông tin công ty
+                <Package size={16} className="text-blue-600 md:w-5 md:h-5" />
+                Chi tiết hóa đơn
               </h3>
-              <div className="space-y-2 text-xs md:text-sm text-gray-700">
-                <p className="font-bold text-lg text-gray-900">{invoice.company.name}</p>
-                <p className="flex items-start gap-2">
-                  <MapPin size={14} className="text-gray-500 flex-shrink-0 mt-0.5" />
-                  {invoice.company.address}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Phone size={14} className="text-gray-500" />
-                  {invoice.company.phone}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Mail size={14} className="text-gray-500" />
-                  {invoice.company.email}
-                </p>
-                <p className="text-gray-600">Mã số thuế: {invoice.company.taxCode}</p>
-              </div>
-            </div>
-
-            {/* Order Info */}
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Package size={18} className="text-blue-600" />
-                Chi tiết đơn hàng
-              </h3>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 text-xs md:text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Mã đơn hàng:</span>
-                  <span className="font-semibold text-gray-900">{invoice.orderNumber}</span>
+                  <span className="text-gray-600">Mã hóa đơn:</span>
+                  <span className="font-semibold text-gray-900">INV-{invoice.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Mã phiên đấu giá:</span>
+                  <span className="font-semibold text-gray-900">AUC-{invoice.auctionSessionId}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Ngày tạo:</span>
-                  <span className="text-gray-900">{formatDate(invoice.issueDate)}</span>
+                  <span className="text-gray-900">{formatDate(invoice.createdAt)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Ngày thanh toán:</span>
-                  <span className="text-gray-900">{formatDate(invoice.paymentDate)}</span>
+                  <span className="text-gray-600">Hạn thanh toán:</span>
+                  <span className="text-gray-900">{formatDate(invoice.dueDate)}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t">
                   <span className="text-gray-600">Trạng thái:</span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(invoice.status)}`}>
                     <CheckCircle size={14} />
-                    Đã thanh toán
+                    {getStatusText(invoice.status)}
                   </span>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Buyer & Seller Info */}
-          <div className="grid md:grid-cols-2 gap-6 px-8 py-6 bg-gray-50">
-            {/* Buyer */}
+            {/* User Info */}
             <div>
-              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <User size={18} className="text-blue-600" />
-                Người mua
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm md:text-base">
+                <User size={16} className="text-blue-600 md:w-5 md:h-5" />
+                Thông tin người mua
               </h3>
-              <div className="space-y-2 text-sm text-gray-700">
-                <p className="font-semibold text-gray-900">{invoice.buyer.name}</p>
+              <div className="space-y-2 text-xs md:text-sm text-gray-700">
+                <p className="font-semibold text-gray-900">
+                  {invoice.user.firstName} {invoice.user.lastName}
+                </p>
+                <p className="flex items-center gap-2">
+                  <User size={14} className="text-gray-500" />
+                  @{invoice.user.username}
+                </p>
                 <p className="flex items-center gap-2">
                   <Mail size={14} className="text-gray-500" />
-                  {invoice.buyer.email}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Phone size={14} className="text-gray-500" />
-                  {invoice.buyer.phone}
-                </p>
-                <p className="flex items-start gap-2">
-                  <MapPin size={14} className="text-gray-500 flex-shrink-0 mt-0.5" />
-                  {invoice.buyer.address}
-                </p>
-              </div>
-            </div>
-
-            {/* Seller */}
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <User size={18} className="text-blue-600" />
-                Người bán
-              </h3>
-              <div className="space-y-2 text-sm text-gray-700">
-                <p className="font-semibold text-gray-900">{invoice.seller.name}</p>
-                <p className="flex items-center gap-2">
-                  <Mail size={14} className="text-gray-500" />
-                  {invoice.seller.email}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Phone size={14} className="text-gray-500" />
-                  {invoice.seller.phone}
-                </p>
-                <p className="flex items-start gap-2">
-                  <MapPin size={14} className="text-gray-500 flex-shrink-0 mt-0.5" />
-                  {invoice.seller.address}
+                  {invoice.user.email}
                 </p>
               </div>
             </div>
@@ -286,7 +254,7 @@ const Invoice = () => {
           {/* Product Details */}
           <div className="px-8 py-6">
             <h3 className="font-semibold text-gray-900 mb-4">Chi tiết sản phẩm</h3>
-            
+
             <div className="border rounded-lg overflow-hidden">
               {/* Table Header */}
               <div className="bg-gray-100 grid grid-cols-12 gap-4 px-4 py-3 text-sm font-semibold text-gray-700">
@@ -402,15 +370,15 @@ const Invoice = () => {
               {/* Tracking Timeline - 4 Steps */}
               <div className="bg-white rounded-xl p-6 border border-gray-200">
                 <h4 className="font-semibold text-gray-900 mb-6">Tiến trình giao hàng</h4>
-                
+
                 {/* Progress Bar */}
                 <div className="relative mb-8">
                   {/* Connection Line */}
                   <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200">
-                    <div 
+                    <div
                       className="h-full bg-blue-600 transition-all duration-500"
-                      style={{ 
-                        width: `${((invoice.trackingTimeline.filter(s => s.completed).length - 1) / (invoice.trackingTimeline.length - 1)) * 100}%` 
+                      style={{
+                        width: `${((invoice.trackingTimeline.filter(s => s.completed).length - 1) / (invoice.trackingTimeline.length - 1)) * 100}%`
                       }}
                     />
                   </div>
@@ -421,11 +389,10 @@ const Invoice = () => {
                       <div key={step.id} className="flex flex-col items-center" style={{ flex: 1 }}>
                         {/* Circle */}
                         <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${
-                            step.completed
+                          className={`w-10 h-10 rounded-full flex items-center justify-center border-4 ${step.completed
                               ? 'bg-blue-600 border-blue-600 text-white'
                               : 'bg-white border-gray-300 text-gray-400'
-                          } shadow-lg transition-all duration-300`}
+                            } shadow-lg transition-all duration-300`}
                         >
                           {step.completed ? (
                             <CheckCircle size={20} />
@@ -433,12 +400,11 @@ const Invoice = () => {
                             <div className="w-3 h-3 rounded-full bg-gray-300" />
                           )}
                         </div>
-                        
+
                         {/* Label */}
                         <div className="mt-3 text-center">
-                          <p className={`text-sm font-semibold whitespace-nowrap ${
-                            step.completed ? 'text-gray-900' : 'text-gray-400'
-                          }`}>
+                          <p className={`text-sm font-semibold whitespace-nowrap ${step.completed ? 'text-gray-900' : 'text-gray-400'
+                            }`}>
                             {step.label}
                           </p>
                           {step.date && (
@@ -457,9 +423,9 @@ const Invoice = () => {
                   <PackageCheck className="text-green-600" size={20} />
                   <span className="text-sm font-semibold text-green-700">
                     {invoice.shippingStatus === 'delivered' ? 'Đã giao hàng thành công' :
-                     invoice.shippingStatus === 'out_for_delivery' ? 'Đang giao hàng' :
-                     invoice.shippingStatus === 'in_transit' ? 'Đang vận chuyển' :
-                     'Đã tiếp nhận'}
+                      invoice.shippingStatus === 'out_for_delivery' ? 'Đang giao hàng' :
+                        invoice.shippingStatus === 'in_transit' ? 'Đang vận chuyển' :
+                          'Đã tiếp nhận'}
                   </span>
                 </div>
               </div>
@@ -467,8 +433,8 @@ const Invoice = () => {
               {/* Shipping Note */}
               <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800">
-                  <span className="font-semibold">📦 Lưu ý:</span> Người bán đã gửi hàng cho đơn vị vận chuyển. 
-                  Mọi thắc mắc về giao hàng vui lòng liên hệ trực tiếp với đơn vị vận chuyển. 
+                  <span className="font-semibold">📦 Lưu ý:</span> Người bán đã gửi hàng cho đơn vị vận chuyển.
+                  Mọi thắc mắc về giao hàng vui lòng liên hệ trực tiếp với đơn vị vận chuyển.
                   Phí ship được thỏa thuận giữa người mua và người bán.
                 </p>
               </div>
@@ -499,7 +465,7 @@ const Invoice = () => {
         {/* Help Text - Hide on print */}
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl print:hidden">
           <p className="text-sm text-blue-800">
-            💡 <span className="font-semibold">Lưu ý:</span> Bạn có thể tải hóa đơn dưới dạng PDF 
+            💡 <span className="font-semibold">Lưu ý:</span> Bạn có thể tải hóa đơn dưới dạng PDF
             hoặc in trực tiếp từ trình duyệt. Hóa đơn này có giá trị thanh toán và giải quyết tranh chấp.
           </p>
         </div>

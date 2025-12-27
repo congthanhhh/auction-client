@@ -62,3 +62,4 @@ export interface ProductListResponse {
         number: number;
     };
 }
+

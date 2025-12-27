@@ -1,45 +1,26 @@
 
 import axiosClient from "@/lib/axios";
-import type { CreateAuctionSessionRequest, CreateAuctionSessionResponse, AuctionSession, AuctionSessionListResponse } from "@/types/auction";
-
-export interface AuctionSessionDetail {
-    id: number;
-    startTime: string;
-    endTime: string;
-    startPrice: number;
-    currentPrice: number;
-    buyNowPrice: number | null;
-    status: string;
-    reservePriceMet: boolean;
-
-    myMaxBid: number | null;
-
-
-    product: {
-        id: number;
-        name: string;
-        startPrice: number;
-        // ... các trường khác nếu cần
-    };
-
-    highestBidder: {
-        username: string;
-        firstName: string;
-        lastName: string;
-        email: string;
-    } | null;
-}
+import type { CreateAuctionSessionRequest, CreateAuctionSessionResponse, AuctionSessionResponse } from "@/types/auction";
+import type { PageResponse } from "@/types/common";
 
 export const auctionService = {
-    // Gọi API lấy chi tiết phiên đấu giá
-    // GET /auction-sessions/{id}
+    // GET /auction-sessions/{id} - Lấy chi tiết phiên đấu giá
     getDetail(id: number) {
-        return axiosClient.get<AuctionSessionDetail>(`/auction-sessions/${id}`);
+        return axiosClient.get<AuctionSessionResponse>(`/auction-sessions/${id}`);
     },
 
-    // GET list auction sessions với pagination
-    getAuctionSessions(params?: { page?: number; size?: number; status?: string }) {
-        return axiosClient.get<AuctionSessionListResponse>('/auction-sessions', { params });
+    // GET /auction-sessions/active-desc - Lấy danh sách phiên đấu giá đang active
+    getActiveAuctionsDesc(page: number = 1, size: number = 10) {
+        return axiosClient.get<PageResponse<AuctionSessionResponse>>('/auction-sessions/active-desc', {
+            params: { page, size }
+        });
+    },
+
+    // GET /auction-sessions/schedule-desc - Lấy danh sách phiên đấu giá đã lên lịch
+    getScheduleAuctionsDesc(page: number = 1, size: number = 10) {
+        return axiosClient.get<PageResponse<AuctionSessionResponse>>('/auction-sessions/schedule-desc', {
+            params: { page, size }
+        });
     },
 
     // POST create auction session (Bước 3 sau khi tạo product)

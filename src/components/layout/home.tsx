@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
 import Header from './header';
 import Footer from './footer';
-import ProductCard from '../ui/product-card';
 import HowToBidModal from '../pop-up/how-to-bid-modal';
 import TermsAndRulesModal from '../pop-up/terms-and-rules-modal';
 import {
@@ -17,20 +16,7 @@ import Autoplay from "embla-carousel-autoplay";
 import imgBanner1 from '../../assets/imgbaner1.jpg';
 import imgBanner2 from '../../assets/imgbaner2.webp';
 import imgBanner3 from '../../assets/imgbaner3.webp';
-import dbData from '../../../db.json';
-import { authService } from '@/services/authService';
-
-export interface Product {
-  id: string;
-  name: string;
-  currentPrice: string;
-  image: string;
-  status: 'active' | 'upcoming' | 'featured';
-  description?: string;
-  endTime?: string;
-  startingPrice?: string;
-  startTime?: string;
-}
+import { useAuctionListStore } from '@/stores/useAuctionListStore';
 
 // Scroll to Top Component
 const ScrollToTop = () => {
@@ -120,28 +106,32 @@ const Home = () => {
   const navigate = useNavigate();
   const [showHowToBid, setShowHowToBid] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [activeProducts, setActiveProducts] = useState<Product[]>([]);
-  const [upcomingProducts, setUpcomingProducts] = useState<Product[]>([]);
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  // Load data from db.json
+  // Sử dụng store để fetch auctions
+  const {
+    activeAuctions,
+    activeLoading,
+    scheduledAuctions,
+    scheduledLoading,
+    fetchActiveAuctions,
+    fetchScheduledAuctions
+  } = useAuctionListStore();
+
+  // Fetch auctions khi component mount
   useEffect(() => {
-    const loadProducts = () => {
-      setLoading(true);
-      try {
-        setActiveProducts(dbData.activeProducts as Product[]);
-        setUpcomingProducts(dbData.upcomingProducts as Product[]);
-        setFeaturedProducts(dbData.featuredProducts as Product[]);
-      } catch (error) {
-        console.error('Error loading products:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Lấy 6 sản phẩm active cho trang home (page 1, size 6)
+    fetchActiveAuctions(1, 6);
+    // Lấy 6 sản phẩm scheduled cho trang home
+    fetchScheduledAuctions(1, 6);
+  }, [fetchActiveAuctions, fetchScheduledAuctions]);
 
-    loadProducts();
-  }, []);
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
 
   // Banner data
   const bannerData = [
@@ -170,6 +160,8 @@ const Home = () => {
       time: "Trả góp 0%"
     }
   ];
+
+  const loading = activeLoading || scheduledLoading;
 
   if (loading) {
     return (
@@ -311,59 +303,74 @@ const Home = () => {
             <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mb-3 sm:mb-0 text-gray-800">
               SẢN PHẨM <span className="text-yellow-600">ĐANG ĐẤU GIÁ</span>
             </h2>
-            <button 
-              onClick={() => navigate('/auctions')}
+            <button
+              onClick={() => navigate('/all-auctions')}
               className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium"
             >
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {activeProducts.slice(0, 12).map((product) => (
-              <div
-                key={product.id}
-                className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
-                onClick={() => navigate(`/product/${product.id}`)}
-              >
-                {/* Image */}
-                <div className="relative overflow-hidden">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  {product.endTime && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {activeAuctions.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-500 text-lg">Chưa có phiên đấu giá nào đang diễn ra</p>
+              </div>
+            ) : (
+              activeAuctions.map((auction) => (
+                <div
+                  key={auction.id}
+                  className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
+                  onClick={() => navigate(`/auction/${auction.id}`)}
+                >
+                  {/* Image */}
+                  <div className="relative overflow-hidden">
+                    <img
+                      src={auction.product.images[0]?.url || 'https://via.placeholder.com/400'}
+                      alt={auction.product.name}
+                      className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
                     <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                       ⏰ Đang diễn ra
                     </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="p-4">
-                  <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
-                    {product.name}
-                  </h3>
-
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-500">Giá hiện tại</p>
-                    <p className="text-xl font-bold text-purple-600">{product.currentPrice}</p>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/product/${product.id}`);
-                      }}
-                      className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
-                    >
-                      Đặt giá
-                    </button>
+                  {/* Content */}
+                  <div className="p-4">
+                    <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                      {auction.product.name}
+                    </h3>
+
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500">Giá hiện tại</p>
+                      <p className="text-xl font-bold text-purple-600">
+                        {formatCurrency(auction.currentPrice)}
+                      </p>
+                    </div>
+
+                    {auction.buyNowPrice && (
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-500">Giá mua ngay</p>
+                        <p className="text-sm font-semibold text-green-600">
+                          {formatCurrency(auction.buyNowPrice)}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/auction/${auction.id}`);
+                        }}
+                        className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
+                      >
+                        Đặt giá
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </section>
 
@@ -371,59 +378,76 @@ const Home = () => {
         <section className="mb-8 sm:mb-10 lg:mb-16">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 lg:mb-8">
             <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mb-3 sm:mb-0 text-gray-800">
-              SẢN PHẨM <span className="text-amber-600">SẮP ĐẤU GIÁ</span> ({upcomingProducts.length})
+              SẢN PHẨM <span className="text-amber-600">SẮP ĐẤU GIÁ</span>
             </h2>
-            <button 
-              onClick={() => navigate('/auctions')}
+            <button
+              onClick={() => navigate('/all-auctions')}
               className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium"
             >
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {upcomingProducts.slice(0, 12).map((product) => (
-              <div
-                key={product.id}
-                className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
-                onClick={() => navigate(`/product/${product.id}`)}
-              >
-                {/* Image */}
-                <div className="relative overflow-hidden">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute top-3 right-3 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                    🕒 Sắp diễn ra
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-4">
-                  <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
-                    {product.name}
-                  </h3>
-
-                  <div className="mb-3">
-                    <p className="text-xs text-gray-500">Giá khởi điểm</p>
-                    <p className="text-xl font-bold text-purple-600">{product.currentPrice}</p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/product/${product.id}`);
-                      }}
-                      className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all"
-                    >
-                      Xem chi tiết
-                    </button>
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {scheduledAuctions.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-500 text-lg">Chưa có phiên đấu giá nào sắp diễn ra</p>
               </div>
-            ))}
+            ) : (
+              scheduledAuctions.map((auction) => (
+                <div
+                  key={auction.id}
+                  className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
+                  onClick={() => navigate(`/auction/${auction.id}`)}
+                >
+                  {/* Image */}
+                  <div className="relative overflow-hidden">
+                    <img
+                      src={auction.product.images[0]?.url || 'https://via.placeholder.com/400'}
+                      alt={auction.product.name}
+                      className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute top-3 right-3 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                      🕒 Sắp diễn ra
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4">
+                    <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                      {auction.product.name}
+                    </h3>
+
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500">Giá khởi điểm</p>
+                      <p className="text-xl font-bold text-purple-600">
+                        {formatCurrency(auction.startPrice)}
+                      </p>
+                    </div>
+
+                    {auction.buyNowPrice && (
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-500">Giá mua ngay</p>
+                        <p className="text-sm font-semibold text-green-600">
+                          {formatCurrency(auction.buyNowPrice)}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/auction/${auction.id}`);
+                        }}
+                        className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all"
+                      >
+                        Xem chi tiết
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </section>
       </main>

@@ -25,9 +25,11 @@ import AdminVerification from './components/layout/admin/admin-verification'
 import AdminSettings from './components/layout/admin/admin-settings'
 import AdminLogs from './components/layout/admin/admin-logs'
 import SellerDashboard from './components/layout/seller-dashboard'
+import PaymentResult from './components/layout/payment-result'
 import { useAuthStore } from './stores/useAuthStore'
 import { useEffect } from 'react'
 import Authenticate from './components/pages/Authenticate.js'
+import CreateProduct from './components/layout/create-product.js'
 
 function App() {
 
@@ -53,21 +55,23 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<SearchResults />} />
-        <Route path="/auctions" element={<AllAuctionsPage />} />
+        <Route path="/all-auctions" element={<AllAuctionsPage />} />
         <Route path="/auction/:auctionId" element={<AuctionDetail />} />
         <Route path="/product/:productId" element={<ProductDetail />} />
         <Route path="/user/profile" element={<UserDetail />} />
         <Route path="/create-auction" element={<CreateAuction />} />
+        <Route path="/create-product" element={<CreateProduct />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/payment" element={<Payment />} />
+        <Route path="/payment-result" element={<PaymentResult />} />
         <Route path="/shipping/:trackingCode" element={<Shipping />} />
         <Route path="/invoice/:orderId" element={<Invoice />} />
         <Route path="/authenticate" element={<Authenticate />} />
-        
+
         {/* Seller Routes */}
         <Route path="/seller/dashboard" element={<SellerDashboard />} />
-        
+
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
