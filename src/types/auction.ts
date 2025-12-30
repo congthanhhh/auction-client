@@ -28,7 +28,7 @@ export interface SimpleUserResponse {
     email: string;
 }
 
-export type AuctionStatus = 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+export type AuctionStatus = 'SCHEDULED' | 'ACTIVE' | 'ENDED' | 'WAITING_PAYMENT' | 'CANCELLED';
 
 export interface AuctionSession {
     id: number;

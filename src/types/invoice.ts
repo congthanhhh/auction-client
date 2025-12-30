@@ -2,7 +2,9 @@
 
 import type { SimpleUserResponse, SimpleProductResponse } from './auction';
 
-export type InvoiceStatus = 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+export type InvoiceStatus = 'PENDING' | 'PAID' | 'SHIPPING' | 'COMPLETED' | 'DISPUTE' | 'CANCELLED_NON_PAYMENT' | 'CANCELLED_BY_SELLER' | 'REFUNDED';
+
+export type InvoiceType = 'AUCTION_SALE' | 'LISTING_FEE';
 
 export interface InvoiceResponse {
     id: number;
@@ -11,6 +13,24 @@ export interface InvoiceResponse {
     auctionSessionId: number;
     finalPrice: number;
     status: InvoiceStatus;
+    type: InvoiceType; // Phân loại: AUCTION_SALE (đơn bán hàng) hoặc LISTING_FEE (phí giá sàn)
     createdAt: string; // ISO 8601 format
     dueDate: string; // ISO 8601 format
+    // Shipping info (chỉ có khi type = AUCTION_SALE)
+    shippingAddress?: string;
+    recipientName?: string;
+    recipientPhone?: string;
+    trackingCode?: string;
+    carrier?: string;
+    shippedAt?: string; // ISO 8601 format
+    paymentTime?: string; // ISO 8601 format
+}
+
+export interface ShipInvoiceRequest {
+    trackingCode: string;
+    carrier: string;
+}
+
+export interface MessageResponse {
+    message: string;
 }

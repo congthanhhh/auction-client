@@ -1,27 +1,10 @@
-import { X, Package, User, MapPin, Phone, Mail, Clock, CheckCircle, Truck, AlertCircle, Copy } from 'lucide-react';
-import { toast } from 'sonner';
+import { X, Package, User, Mail, Clock, CheckCircle, Truck, AlertCircle } from 'lucide-react';
+import type { InvoiceResponse } from '@/types/invoice';
 
 interface OrderDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  order: {
-    id: number;
-    orderId: string;
-    productName: string;
-    image: string;
-    buyer: string;
-    buyerEmail: string;
-    buyerPhone: string;
-    shippingAddress: string;
-    amount: number;
-    status: string;
-    paidDate: string;
-    shippedDate?: string;
-    completedDate?: string;
-    trackingCode?: string;
-    feedbackGiven?: boolean;
-    rating?: number;
-  };
+  order: InvoiceResponse;
 }
 
 const OrderDetailModal = ({ isOpen, onClose, order }: OrderDetailModalProps) => {
@@ -39,29 +22,34 @@ const OrderDetailModal = ({ isOpen, onClose, order }: OrderDetailModalProps) => 
   };
 
   const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'PAID': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
-      case 'SHIPPING': return 'bg-blue-100 text-blue-700 border-blue-300';
+    switch (status) {
+      case 'PENDING': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
+      case 'PAID': return 'bg-blue-100 text-blue-700 border-blue-300';
+      case 'SHIPPING': return 'bg-purple-100 text-purple-700 border-purple-300';
       case 'COMPLETED': return 'bg-green-100 text-green-700 border-green-300';
       case 'DISPUTE': return 'bg-red-100 text-red-700 border-red-300';
+      case 'CANCELLED_NON_PAYMENT': return 'bg-gray-100 text-gray-700 border-gray-300';
+      case 'REFUNDED': return 'bg-orange-100 text-orange-700 border-orange-300';
       default: return 'bg-gray-100 text-gray-700 border-gray-300';
     }
   };
 
   const translateStatus = (status: string) => {
     const translations: { [key: string]: string } = {
+      'PENDING': 'Chờ thanh toán',
       'PAID': 'Đã thanh toán',
       'SHIPPING': 'Đang giao hàng',
       'COMPLETED': 'Hoàn thành',
-      'DISPUTE': 'Tranh chấp'
+      'DISPUTE': 'Tranh chấp',
+      'CANCELLED_NON_PAYMENT': 'Hủy do không thanh toán',
+      'CANCELLED_BY_SELLER': 'Hủy bởi người bán',
+      'REFUNDED': 'Đã hoàn tiền'
     };
     return translations[status] || status;
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Đã copy vào clipboard!');
-  };
+  const isListingFee = order.type === 'LISTING_FEE';
+  const isAuctionSale = order.type === 'AUCTION_SALE';
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
@@ -77,8 +65,10 @@ const OrderDetailModal = ({ isOpen, onClose, order }: OrderDetailModalProps) => 
           <div className="flex items-center gap-3">
             <Package className="w-8 h-8" />
             <div>
-              <h2 className="text-2xl font-bold">Chi tiết đơn hàng</h2>
-              <p className="text-purple-100 text-sm mt-1">Mã đơn: {order.orderId}</p>
+              <h2 className="text-2xl font-bold">Chi tiết {isListingFee ? 'hóa đơn phí giá sàn' : 'đơn hàng'}</h2>
+              <p className="text-purple-100 text-sm mt-1">
+                Mã: {isListingFee ? `FEE-${order.id}` : `INV-${order.id}`}
+              </p>
             </div>
           </div>
         </div>
@@ -100,174 +90,121 @@ const OrderDetailModal = ({ isOpen, onClose, order }: OrderDetailModalProps) => 
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
               <Package className="w-5 h-5 text-purple-600" />
               Thông tin sản phẩm
+              {isListingFee && (
+                <span className="ml-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
+                  💰 Phí Giá Sàn (5%)
+                </span>
+              )}
             </h3>
             <div className="flex gap-4">
-              <img
-                src={order.image}
-                alt={order.productName}
-                className="w-24 h-24 object-cover rounded-lg"
-              />
+              {order.product.images && order.product.images[0] && (
+                <img
+                  src={order.product.images[0].url}
+                  alt={order.product.name}
+                  className="w-24 h-24 object-cover rounded-lg"
+                />
+              )}
               <div className="flex-1">
-                <p className="font-bold text-lg text-gray-800 mb-2">{order.productName}</p>
-                <p className="text-2xl font-bold text-purple-600">{formatCurrency(order.amount)}</p>
+                <p className="font-bold text-lg text-gray-800 mb-2">{order.product.name}</p>
+                <p className="text-2xl font-bold text-purple-600">{formatCurrency(order.finalPrice)}</p>
+                {isListingFee && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Phí này được tính khi phiên đấu giá kết thúc mà chưa đạt giá sàn (5% giá khởi điểm)
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Buyer Info */}
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-6">
-            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
-              Thông tin người mua
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <User className="w-5 h-5 text-blue-600" />
+          {/* Buyer Info - Chỉ hiển thị cho AUCTION_SALE */}
+          {isAuctionSale && (
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-6">
+              <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-600" />
+                Thông tin người mua
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <User className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Họ tên</p>
+                    <p className="font-semibold text-gray-800">{order.user.firstName} {order.user.lastName}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Họ tên</p>
-                  <p className="font-semibold text-gray-800">{order.buyer}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Email</p>
-                  <p className="font-semibold text-gray-800 text-sm">{order.buyerEmail}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Số điện thoại</p>
-                  <p className="font-semibold text-gray-800">{order.buyerPhone}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 md:col-span-2">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Địa chỉ giao hàng</p>
-                  <p className="font-semibold text-gray-800">{order.shippingAddress}</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-semibold text-gray-800 text-sm">{order.user.email}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Timeline */}
           <div className="bg-gradient-to-r from-green-50 to-teal-50 border border-green-200 rounded-xl p-6">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-green-600" />
-              Lịch sử đơn hàng
+              {isListingFee ? 'Lịch sử thanh toán' : 'Lịch sử đơn hàng'}
             </h3>
-            <div className="space-y-4">
-              {/* Paid */}
-              <div className="flex items-start gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">
-                    ✓
-                  </div>
-                  {(order.shippedDate || order.completedDate) && (
-                    <div className="w-0.5 h-12 bg-green-300 my-1"></div>
-                  )}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
                 </div>
-                <div className="flex-1 pb-4">
-                  <p className="font-bold text-gray-800">Đã thanh toán</p>
-                  <p className="text-sm text-gray-600">{formatDate(order.paidDate)}</p>
-                  <p className="text-xs text-gray-500 mt-1">Người mua đã hoàn tất thanh toán qua PayPal Sandbox</p>
+                <div>
+                  <p className="font-semibold text-gray-800">{isListingFee ? 'Hóa đơn được tạo' : 'Đơn hàng được tạo'}</p>
+                  <p className="text-sm text-gray-600">{formatDate(order.createdAt)}</p>
                 </div>
               </div>
-
-              {/* Shipped */}
-              {order.shippedDate && (
-                <div className="flex items-start gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">
-                      ✓
-                    </div>
-                    {order.completedDate && (
-                      <div className="w-0.5 h-12 bg-blue-300 my-1"></div>
-                    )}
+              {order.dueDate && order.status === 'PENDING' && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-orange-600" />
                   </div>
-                  <div className="flex-1 pb-4">
-                    <p className="font-bold text-gray-800">Đã giao cho đơn vị vận chuyển</p>
-                    <p className="text-sm text-gray-600">{formatDate(order.shippedDate)}</p>
+                  <div>
+                    <p className="font-semibold text-gray-800">Hạn thanh toán</p>
+                    <p className="text-sm text-gray-600">{formatDate(order.dueDate)}</p>
+                  </div>
+                </div>
+              )}
+              {order.paymentTime && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800">Đã thanh toán</p>
+                    <p className="text-sm text-gray-600">{formatDate(order.paymentTime)}</p>
+                  </div>
+                </div>
+              )}
+              {order.shippedAt && isAuctionSale && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                    <Truck className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800">Đã gửi hàng</p>
+                    <p className="text-sm text-gray-600">{formatDate(order.shippedAt)}</p>
                     {order.trackingCode && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <code className="bg-blue-100 text-blue-700 px-3 py-1 rounded font-mono font-bold">
-                          {order.trackingCode}
-                        </code>
-                        <button
-                          onClick={() => copyToClipboard(order.trackingCode!)}
-                          className="p-1 hover:bg-blue-100 rounded transition-colors"
-                          title="Copy mã vận đơn"
-                        >
-                          <Copy className="w-4 h-4 text-blue-600" />
-                        </button>
-                      </div>
+                      <p className="text-xs text-purple-600 mt-1 font-mono">
+                        Mã vận đơn: {order.trackingCode} - {order.carrier}
+                      </p>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {/* Completed */}
-              {order.completedDate && (
-                <div className="flex items-start gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-10 h-10 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold">
-                      ✓
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-gray-800">Hoàn thành</p>
-                    <p className="text-sm text-gray-600">{formatDate(order.completedDate)}</p>
-                    <p className="text-xs text-gray-500 mt-1">Người mua đã xác nhận nhận được hàng</p>
-                    {order.feedbackGiven && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">
-                          Đã đánh giá {order.rating} ⭐
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Pending States */}
-              {!order.shippedDate && (
-                <div className="flex items-start gap-4 opacity-50">
-                  <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold">
-                    ?
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-600">Chờ giao hàng</p>
-                    <p className="text-xs text-gray-500">Vui lòng nhập mã vận đơn</p>
-                  </div>
-                </div>
-              )}
-
-              {order.shippedDate && !order.completedDate && (
-                <div className="flex items-start gap-4 opacity-50">
-                  <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold">
-                    ?
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-600">Chờ người mua xác nhận</p>
-                    <p className="text-xs text-gray-500">Hoặc tự động hoàn thành sau 15 ngày</p>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Important Note */}
-          {order.status === 'SHIPPING' && (
+          {/* Important Note - Chỉ cho AUCTION_SALE đang giao hàng */}
+          {isAuctionSale && order.status === 'SHIPPING' && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />

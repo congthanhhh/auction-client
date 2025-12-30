@@ -100,9 +100,9 @@ const CreateAuction = () => {
       return;
     }
 
-    const daysDiff = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24);
-    if (daysDiff < 1) {
-      toast.error('Phiên đấu giá phải kéo dài ít nhất 1 ngày');
+    const daysDiff = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+    if (daysDiff < 10) {
+      toast.error('Phiên đấu giá phải kéo dài ít nhất 10 phút');
       return;
     }
 
@@ -396,7 +396,7 @@ const CreateAuction = () => {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       required
                     />
-                    <p className="text-xs text-gray-500 mt-1">Ít nhất 1 ngày sau thời gian bắt đầu</p>
+
                   </div>
                 </div>
               </div>

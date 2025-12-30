@@ -1,6 +1,6 @@
 
 import axiosClient from "@/lib/axios";
-import type { CreateAuctionSessionRequest, CreateAuctionSessionResponse, AuctionSessionResponse } from "@/types/auction";
+import type { CreateAuctionSessionRequest, CreateAuctionSessionResponse, AuctionSessionResponse, AuctionStatus } from "@/types/auction";
 import type { PageResponse } from "@/types/common";
 
 export const auctionService = {
@@ -22,6 +22,20 @@ export const auctionService = {
             params: { page, size }
         });
     },
+
+    // GET /auction-sessions/my-sessions - Lấy các phiên đấu giá của seller
+    getMyAuctionSessions(params: { status?: AuctionStatus; page?: number; size?: number }) {
+        return axiosClient.get<PageResponse<AuctionSessionResponse>>('/auction-sessions/my-sessions', {
+            params
+        });
+    },
+
+    // // GET /auction-sessions - Lấy danh sách phiên đấu giá của seller (with filter)
+    // getMyAuctionSessions(params: { status?: 'SCHEDULED' | 'ACTIVE' | 'ENDED'; page?: number; size?: number }) {
+    //     return axiosClient.get<PageResponse<AuctionSessionResponse>>('/auction-sessions', {
+    //         params
+    //     });
+    // },
 
     // POST create auction session (Bước 3 sau khi tạo product)
     createAuctionSession(data: CreateAuctionSessionRequest) {

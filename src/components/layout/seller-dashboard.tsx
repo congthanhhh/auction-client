@@ -1,143 +1,155 @@
-import { useState } from 'react';
-import { Package, TrendingUp, ShoppingCart, Clock, CheckCircle, AlertCircle, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Package, TrendingUp, ShoppingCart, Clock, CheckCircle, AlertCircle, Star, Loader2, ChevronLeft, ChevronRight, DollarSign } from 'lucide-react';
 import PageLayout from './page-layout';
 import ShippingTrackingModal from '../pop-up/shipping-tracking-modal';
 import OrderDetailModal from '../pop-up/order-detail-modal';
-import AuctionDetailModal from '../pop-up/auction-detail-modal';
 import { toast } from 'sonner';
-
-// Mock data cho phiên đấu giá
-const MOCK_AUCTIONS = [
-  {
-    id: 1,
-    productName: "iPhone 15 Pro Max 256GB",
-    image: "https://images.unsplash.com/photo-1696446702183-cbd90e810a7e?w=300",
-    startPrice: 15000000,
-    currentPrice: 28500000,
-    buyNowPrice: 32000000,
-    totalBids: 45,
-    status: "ACTIVE", // ACTIVE, ENDED, SOLD
-    startDate: "2024-12-20 10:00",
-    endDate: "2024-12-27 22:00",
-    bidders: 12
-  },
-  {
-    id: 2,
-    productName: "MacBook Pro M3 16inch",
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300",
-    startPrice: 35000000,
-    currentPrice: 42000000,
-    buyNowPrice: null,
-    totalBids: 28,
-    status: "ENDED",
-    startDate: "2024-12-15 14:00",
-    endDate: "2024-12-22 20:00",
-    winner: "nguyenvana@gmail.com",
-    bidders: 8
-  },
-  {
-    id: 3,
-    productName: "Sony WH-1000XM5 Headphones",
-    image: "https://images.unsplash.com/photo-1545127398-14699f92334b?w=300",
-    startPrice: 3000000,
-    currentPrice: 7200000,
-    buyNowPrice: 8500000,
-    totalBids: 67,
-    status: "SOLD",
-    startDate: "2024-12-10 09:00",
-    endDate: "2024-12-18 18:00",
-    winner: "tranvanb@gmail.com",
-    soldPrice: 8500000,
-    soldDate: "2024-12-16 15:30",
-    bidders: 15
-  },
-  {
-    id: 4,
-    productName: "Canon EOS R6 Mark II",
-    image: "https://images.unsplash.com/photo-1606980259767-c6d6d6f42c94?w=300",
-    startPrice: 45000000,
-    currentPrice: 48000000,
-    buyNowPrice: 55000000,
-    totalBids: 12,
-    status: "ACTIVE",
-    startDate: "2024-12-22 08:00",
-    endDate: "2024-12-29 20:00",
-    bidders: 5
-  }
-];
-
-// Mock data cho đơn hàng
-const MOCK_ORDERS = [
-  {
-    id: 1,
-    orderId: "ORD-2024-001",
-    productName: "Sony WH-1000XM5 Headphones",
-    image: "https://images.unsplash.com/photo-1545127398-14699f92334b?w=300",
-    buyer: "Trần Văn B",
-    buyerEmail: "tranvanb@gmail.com",
-    amount: 8500000,
-    status: "PAID", // PAID, SHIPPING, COMPLETED, DISPUTE
-    paidDate: "2024-12-18 16:00",
-    shippedDate: null,
-    trackingCode: null,
-    buyerPhone: "0901234567",
-    shippingAddress: "123 Nguyễn Văn Linh, Q.7, TP.HCM"
-  },
-  {
-    id: 2,
-    orderId: "ORD-2024-002",
-    productName: "MacBook Pro M3 16inch",
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300",
-    buyer: "Nguyễn Văn A",
-    buyerEmail: "nguyenvana@gmail.com",
-    amount: 42000000,
-    status: "SHIPPING",
-    paidDate: "2024-12-22 10:30",
-    shippedDate: "2024-12-23 09:15",
-    trackingCode: "VN123456789",
-    buyerPhone: "0912345678",
-    shippingAddress: "456 Lê Văn Việt, Q.9, TP.HCM"
-  },
-  {
-    id: 3,
-    orderId: "ORD-2024-003",
-    productName: "iPad Pro 12.9 M2",
-    image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300",
-    buyer: "Lê Thị C",
-    buyerEmail: "lethic@gmail.com",
-    amount: 25000000,
-    status: "COMPLETED",
-    paidDate: "2024-12-10 14:00",
-    shippedDate: "2024-12-11 08:00",
-    completedDate: "2024-12-15 16:30",
-    trackingCode: "VN987654321",
-    buyerPhone: "0923456789",
-    shippingAddress: "789 Võ Văn Ngân, Thủ Đức, TP.HCM",
-    feedbackGiven: true,
-    rating: 5
-  }
-];
+import { auctionService } from '@/services/auctionService';
+import { invoiceService, type SellerRevenueResponse } from '@/services/invoiceService';
+import type { AuctionSessionResponse, AuctionStatus } from '@/types/auction';
+import type { InvoiceResponse, InvoiceStatus } from '@/types/invoice';
 
 type TabType = 'auctions' | 'orders' | 'stats';
+type OrderSubTab = 'sales' | 'fees'; // Sub-tabs for Orders
 
 const SellerDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('auctions');
-  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+  const [orderSubTab, setOrderSubTab] = useState<OrderSubTab>('sales'); // Default: Đơn Bán Hàng
+  const [selectedAuctionStatus, setSelectedAuctionStatus] = useState<AuctionStatus | undefined>(undefined);
+  const [selectedSalesStatus, setSelectedSalesStatus] = useState<InvoiceStatus | undefined>(undefined);
+  const [selectedFeesStatus, setSelectedFeesStatus] = useState<InvoiceStatus | undefined>(undefined);
   const [showShippingModal, setShowShippingModal] = useState(false);
   const [showOrderDetailModal, setShowOrderDetailModal] = useState(false);
-  const [showAuctionDetailModal, setShowAuctionDetailModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [selectedAuction, setSelectedAuction] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<InvoiceResponse | null>(null);
 
-  // Thống kê
+  // API State - Auctions
+  const [auctions, setAuctions] = useState<AuctionSessionResponse[]>([]);
+  const [isLoadingAuctions, setIsLoadingAuctions] = useState(false);
+  const [auctionPage, setAuctionPage] = useState(1);
+  const [auctionTotalPages, setAuctionTotalPages] = useState(1);
+
+  // API State - Sales (AUCTION_SALE invoices)
+  const [sales, setSales] = useState<InvoiceResponse[]>([]);
+  const [isLoadingSales, setIsLoadingSales] = useState(false);
+  const [salesPage, setSalesPage] = useState(1);
+  const [salesTotalPages, setSalesTotalPages] = useState(1);
+
+  // API State - Listing Fees (LISTING_FEE invoices)
+  const [fees, setFees] = useState<InvoiceResponse[]>([]);
+  const [isLoadingFees, setIsLoadingFees] = useState(false);
+  const [feesPage, setFeesPage] = useState(1);
+  const [feesTotalPages, setFeesTotalPages] = useState(1);
+
+  // API State - Seller Statistics
+  const [sellerStats, setSellerStats] = useState<SellerRevenueResponse | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+  const pageSize = 10;
+
+  // Fetch Seller Stats on mount
+  useEffect(() => {
+    fetchSellerStats();
+  }, []);
+
+  // Fetch Auctions
+  useEffect(() => {
+    if (activeTab === 'auctions') {
+      fetchAuctions();
+    }
+  }, [selectedAuctionStatus, auctionPage, activeTab]);
+
+  // Fetch Sales
+  useEffect(() => {
+    if (activeTab === 'orders' && orderSubTab === 'sales') {
+      fetchSales();
+    }
+  }, [selectedSalesStatus, salesPage, activeTab, orderSubTab]);
+
+  // Fetch Fees
+  useEffect(() => {
+    if (activeTab === 'orders' && orderSubTab === 'fees') {
+      fetchFees();
+    }
+  }, [selectedFeesStatus, feesPage, activeTab, orderSubTab]);
+
+  const fetchSellerStats = async () => {
+    try {
+      setIsLoadingStats(true);
+      const response = await invoiceService.getSellerStats();
+      setSellerStats(response.data);
+    } catch (error: any) {
+      console.error('Error fetching seller stats:', error);
+      toast.error('Không thể tải thống kê');
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  const fetchAuctions = async () => {
+    try {
+      setIsLoadingAuctions(true);
+      const response = await auctionService.getMyAuctionSessions({
+        status: selectedAuctionStatus,
+        page: auctionPage,
+        size: pageSize
+      });
+      setAuctions(response.data.data);
+      setAuctionTotalPages(response.data.totalPages);
+    } catch (error: any) {
+      console.error('Error fetching auctions:', error);
+      toast.error('Không thể tải danh sách phiên đấu giá');
+    } finally {
+      setIsLoadingAuctions(false);
+    }
+  };
+
+  const fetchSales = async () => {
+    try {
+      setIsLoadingSales(true);
+      const response = await invoiceService.getMySales({
+        status: selectedSalesStatus,
+        page: salesPage,
+        size: pageSize
+      });
+      setSales(response.data.data);
+      setSalesTotalPages(response.data.totalPages);
+    } catch (error: any) {
+      console.error('Error fetching sales:', error);
+      toast.error('Không thể tải danh sách đơn bán hàng');
+    } finally {
+      setIsLoadingSales(false);
+    }
+  };
+
+  const fetchFees = async () => {
+    try {
+      setIsLoadingFees(true);
+      const response = await invoiceService.getMyListingFees({
+        status: selectedFeesStatus,
+        page: feesPage,
+        size: pageSize
+      });
+      setFees(response.data.data);
+      setFeesTotalPages(response.data.totalPages);
+    } catch (error: any) {
+      console.error('Error fetching listing fees:', error);
+      toast.error('Không thể tải danh sách phí giá sàn');
+    } finally {
+      setIsLoadingFees(false);
+    }
+  };
+
+  // Thống kê - Sử dụng dữ liệu từ API
   const stats = {
-    totalAuctions: 4,
-    activeAuctions: 2,
-    soldItems: 1,
-    totalRevenue: 75500000,
-    pendingOrders: 1,
-    averageRating: 4.8,
-    totalFeedbacks: 15
+    totalAuctions: sellerStats?.totalAuctionSessions || 0,
+    activeAuctions: auctions.filter(a => a.status === 'ACTIVE').length,
+    soldItems: sales.filter(o => o.status === 'COMPLETED').length,
+    totalRevenue: sellerStats?.totalRevenue || 0,
+    pendingOrders: sales.filter(o => o.status === 'PAID').length,
+    averageRating: 4.8, // Mock data - cần API riêng
+    totalFeedbacks: 15  // Mock data - cần API riêng
   };
 
   // Format tiền
@@ -153,488 +165,910 @@ const SellerDashboard = () => {
     return new Date(dateString).toLocaleString('vi-VN');
   };
 
-  // Lọc auctions
-  const filteredAuctions = selectedStatus === 'ALL' 
-    ? MOCK_AUCTIONS 
-    : MOCK_AUCTIONS.filter(a => a.status === selectedStatus);
-
-  // Status badge colors
-  const getStatusColor = (status: string) => {
-    switch(status) {
+  // Status badge colors for Auctions
+  const getAuctionStatusColor = (status: AuctionStatus) => {
+    switch (status) {
+      case 'SCHEDULED': return 'bg-yellow-100 text-yellow-700';
       case 'ACTIVE': return 'bg-green-100 text-green-700';
       case 'ENDED': return 'bg-blue-100 text-blue-700';
-      case 'SOLD': return 'bg-purple-100 text-purple-700';
-      case 'PAID': return 'bg-yellow-100 text-yellow-700';
-      case 'SHIPPING': return 'bg-blue-100 text-blue-700';
+      case 'WAITING_PAYMENT': return 'bg-orange-100 text-orange-700';
+      case 'CANCELLED': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  // Status badge colors for Orders
+  const getOrderStatusColor = (status: InvoiceStatus) => {
+    switch (status) {
+      case 'PENDING': return 'bg-yellow-100 text-yellow-700';
+      case 'PAID': return 'bg-blue-100 text-blue-700';
+      case 'SHIPPING': return 'bg-purple-100 text-purple-700';
       case 'COMPLETED': return 'bg-green-100 text-green-700';
       case 'DISPUTE': return 'bg-red-100 text-red-700';
+      case 'CANCELLED_NON_PAYMENT': return 'bg-gray-100 text-gray-700';
+      case 'CANCELLED_BY_SELLER': return 'bg-gray-100 text-gray-700';
+      case 'REFUNDED': return 'bg-orange-100 text-orange-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
 
   // Dịch status
-  const translateStatus = (status: string) => {
-    const translations: { [key: string]: string } = {
+  const translateAuctionStatus = (status: AuctionStatus) => {
+    const translations: { [key in AuctionStatus]: string } = {
+      'SCHEDULED': 'Đã lên lịch',
       'ACTIVE': 'Đang đấu giá',
       'ENDED': 'Đã kết thúc',
-      'SOLD': 'Đã bán',
+      'WAITING_PAYMENT': 'Chờ thanh toán',
+      'CANCELLED': 'Đã hủy'
+    };
+    return translations[status];
+  };
+
+  const translateOrderStatus = (status: InvoiceStatus) => {
+    const translations: { [key in InvoiceStatus]: string } = {
+      'PENDING': 'Chờ thanh toán',
       'PAID': 'Đã thanh toán',
       'SHIPPING': 'Đang giao hàng',
       'COMPLETED': 'Hoàn thành',
-      'DISPUTE': 'Tranh chấp'
+      'DISPUTE': 'Tranh chấp',
+      'CANCELLED_NON_PAYMENT': 'Hủy do không thanh toán',
+      'CANCELLED_BY_SELLER': 'Hủy bởi người bán',
+      'REFUNDED': 'Đã hoàn tiền'
     };
-    return translations[status] || status;
+    return translations[status];
   };
 
   // Handle shipping modal
-  const handleOpenShippingModal = (order: any) => {
+  const handleOpenShippingModal = (order: InvoiceResponse) => {
     setSelectedOrder(order);
     setShowShippingModal(true);
   };
 
-  const handleSubmitTracking = (trackingCode: string, shippingProvider: string) => {
-    // Trong thực tế sẽ gọi API
-    toast.success('Đã cập nhật mã vận đơn!', {
-      description: `Mã vận đơn: ${trackingCode} - ${shippingProvider}`
-    });
-    console.log('Tracking code:', trackingCode, 'Provider:', shippingProvider);
+  const handleSubmitTracking = async (trackingCode: string, carrier: string) => {
+    if (!selectedOrder) return;
+
+    try {
+      await invoiceService.shipInvoice(selectedOrder.id, {
+        trackingCode,
+        carrier
+      });
+      toast.success('Đã cập nhật mã vận đơn!', {
+        description: `Mã vận đơn: ${trackingCode} - ${carrier}`
+      });
+      setShowShippingModal(false);
+      // Reload based on current sub-tab
+      if (orderSubTab === 'sales') {
+        fetchSales();
+      }
+    } catch (error: any) {
+      console.error('Error shipping invoice:', error);
+      toast.error(error.response?.data?.message || 'Không thể cập nhật mã vận đơn');
+    }
   };
 
   // Handle order detail modal
-  const handleOpenOrderDetail = (order: any) => {
+  const handleOpenOrderDetail = (order: InvoiceResponse) => {
     setSelectedOrder(order);
     setShowOrderDetailModal(true);
-  };
-
-  // Handle auction detail modal
-  const handleOpenAuctionDetail = (auction: any) => {
-    setSelectedAuction(auction);
-    setShowAuctionDetailModal(true);
   };
 
   return (
     <PageLayout>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 py-8">
         <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            🏪 Quản Lý Cửa Hàng
-          </h1>
-          <p className="text-gray-600">
-            Quản lý phiên đấu giá, đơn hàng và theo dõi doanh thu của bạn
-          </p>
-        </div>
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              🏪 Quản Lý Cửa Hàng
+            </h1>
+            <p className="text-gray-600">
+              Quản lý phiên đấu giá, đơn hàng và theo dõi doanh thu của bạn
+            </p>
+          </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Tổng phiên đấu giá</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.totalAuctions}</p>
-                <p className="text-green-600 text-sm mt-1">
-                  {stats.activeAuctions} đang hoạt động
-                </p>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500 text-sm mb-1">Tổng phiên đấu giá</p>
+                  {isLoadingStats ? (
+                    <Loader2 className="w-8 h-8 animate-spin text-purple-500 my-2" />
+                  ) : (
+                    <p className="text-3xl font-bold text-gray-800">{stats.totalAuctions}</p>
+                  )}
+                  <p className="text-green-600 text-sm mt-1">
+                    {stats.activeAuctions} đang hoạt động
+                  </p>
+                </div>
+                <Package className="w-12 h-12 text-purple-500 opacity-80" />
               </div>
-              <Package className="w-12 h-12 text-purple-500 opacity-80" />
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500 text-sm mb-1">Tổng doanh thu</p>
+                  {isLoadingStats ? (
+                    <Loader2 className="w-8 h-8 animate-spin text-green-500 my-2" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-800">
+                      {formatCurrency(stats.totalRevenue)}
+                    </p>
+                  )}
+                  <p className="text-green-600 text-sm mt-1">
+                    {stats.soldItems} sản phẩm đã bán
+                  </p>
+                </div>
+                <TrendingUp className="w-12 h-12 text-green-500 opacity-80" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500 text-sm mb-1">Đơn hàng chờ xử lý</p>
+                  <p className="text-3xl font-bold text-gray-800">{stats.pendingOrders}</p>
+                  <p className="text-orange-600 text-sm mt-1">
+                    Cần giao hàng
+                  </p>
+                </div>
+                <ShoppingCart className="w-12 h-12 text-blue-500 opacity-80" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500 text-sm mb-1">Đánh giá</p>
+                  <p className="text-3xl font-bold text-gray-800">
+                    {stats.averageRating} <span className="text-xl">⭐</span>
+                  </p>
+                  <p className="text-gray-600 text-sm mt-1">
+                    {stats.totalFeedbacks} lượt đánh giá
+                  </p>
+                </div>
+                <Star className="w-12 h-12 text-yellow-500 opacity-80" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Doanh thu</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {formatCurrency(stats.totalRevenue)}
-                </p>
-                <p className="text-green-600 text-sm mt-1">
-                  {stats.soldItems} sản phẩm đã bán
-                </p>
-              </div>
-              <TrendingUp className="w-12 h-12 text-green-500 opacity-80" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Đơn hàng chờ xử lý</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.pendingOrders}</p>
-                <p className="text-orange-600 text-sm mt-1">
-                  Cần giao hàng
-                </p>
-              </div>
-              <ShoppingCart className="w-12 h-12 text-blue-500 opacity-80" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Đánh giá</p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {stats.averageRating} <span className="text-xl">⭐</span>
-                </p>
-                <p className="text-gray-600 text-sm mt-1">
-                  {stats.totalFeedbacks} lượt đánh giá
-                </p>
-              </div>
-              <Star className="w-12 h-12 text-yellow-500 opacity-80" />
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="border-b border-gray-200">
-            <div className="flex">
-              <button
-                onClick={() => setActiveTab('auctions')}
-                className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                  activeTab === 'auctions'
+          {/* Tabs */}
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="border-b border-gray-200">
+              <div className="flex">
+                <button
+                  onClick={() => setActiveTab('auctions')}
+                  className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${activeTab === 'auctions'
                     ? 'bg-purple-500 text-white'
                     : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                📦 Phiên Đấu Giá
-              </button>
-              <button
-                onClick={() => setActiveTab('orders')}
-                className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                  activeTab === 'orders'
+                    }`}
+                >
+                  📦 Phiên Đấu Giá của tôi
+                </button>
+                <button
+                  onClick={() => setActiveTab('orders')}
+                  className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${activeTab === 'orders'
                     ? 'bg-purple-500 text-white'
                     : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                🚚 Đơn Hàng
-                {stats.pendingOrders > 0 && (
-                  <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    {stats.pendingOrders}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab('stats')}
-                className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                  activeTab === 'stats'
+                    }`}
+                >
+                  🚚 Đơn Hàng
+                  {stats.pendingOrders > 0 && (
+                    <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                      {stats.pendingOrders}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('stats')}
+                  className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${activeTab === 'stats'
                     ? 'bg-purple-500 text-white'
                     : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                📊 Thống Kê
-              </button>
+                    }`}
+                >
+                  📊 Thống Kê
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="p-6">
-            {/* Tab: Phiên Đấu Giá */}
-            {activeTab === 'auctions' && (
-              <div>
-                {/* Filter */}
-                <div className="flex gap-2 mb-6">
-                  {['ALL', 'ACTIVE', 'ENDED', 'SOLD'].map((status) => (
+            <div className="p-6">
+              {/* Tab: Phiên Đấu Giá */}
+              {activeTab === 'auctions' && (
+                <div>
+                  {/* Filter */}
+                  <div className="flex gap-2 mb-6 flex-wrap">
                     <button
-                      key={status}
-                      onClick={() => setSelectedStatus(status)}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        selectedStatus === status
+                      onClick={() => {
+                        setSelectedAuctionStatus(undefined);
+                        setAuctionPage(1);
+                      }}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${!selectedAuctionStatus
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                      Tất cả
+                    </button>
+                    {(['SCHEDULED', 'ACTIVE', 'ENDED'] as AuctionStatus[]).map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => {
+                          setSelectedAuctionStatus(status);
+                          setAuctionPage(1);
+                        }}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedAuctionStatus === status
                           ? 'bg-purple-500 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {status === 'ALL' ? 'Tất cả' : translateStatus(status)}
-                    </button>
-                  ))}
-                </div>
+                          }`}
+                      >
+                        {translateAuctionStatus(status)}
+                      </button>
+                    ))}
+                  </div>
 
-                {/* Auctions List */}
-                <div className="space-y-4">
-                  {filteredAuctions.map((auction) => (
-                    <div
-                      key={auction.id}
-                      className="bg-gradient-to-r from-white to-purple-50 border border-purple-100 rounded-xl p-6 hover:shadow-lg transition-shadow"
-                    >
-                      <div className="flex gap-6">
-                        {/* Image */}
-                        <img
-                          src={auction.image}
-                          alt={auction.productName}
-                          className="w-32 h-32 object-cover rounded-lg"
-                        />
-
-                        {/* Content */}
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <h3 className="text-xl font-bold text-gray-800 mb-1">
-                                {auction.productName}
-                              </h3>
-                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(auction.status)}`}>
-                                {translateStatus(auction.status)}
-                              </span>
-                            </div>
-                            <button 
-                              onClick={() => handleOpenAuctionDetail(auction)}
-                              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-                            >
-                              Chi tiết
-                            </button>
-                          </div>
-
-                          {/* Info Grid */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                            <div>
-                              <p className="text-gray-500 text-sm">Giá khởi điểm</p>
-                              <p className="text-gray-800 font-semibold">
-                                {formatCurrency(auction.startPrice)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-500 text-sm">Giá hiện tại</p>
-                              <p className="text-purple-600 font-bold text-lg">
-                                {formatCurrency(auction.currentPrice)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-500 text-sm">Số lượt đấu</p>
-                              <p className="text-gray-800 font-semibold">
-                                {auction.totalBids} ({auction.bidders} người)
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-500 text-sm">
-                                {auction.status === 'SOLD' ? 'Đã bán' : auction.buyNowPrice ? 'Mua ngay' : 'Không có'}
-                              </p>
-                              <p className="text-green-600 font-semibold">
-                                {auction.status === 'SOLD' 
-                                  ? formatCurrency(auction.soldPrice!) 
-                                  : auction.buyNowPrice 
-                                    ? formatCurrency(auction.buyNowPrice)
-                                    : 'N/A'
-                                }
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Timeline */}
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              <span>Bắt đầu: {formatDate(auction.startDate)}</span>
-                            </div>
-                            <span>→</span>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              <span>Kết thúc: {formatDate(auction.endDate)}</span>
-                            </div>
-                          </div>
-
-                          {/* Winner info */}
-                          {(auction.status === 'ENDED' || auction.status === 'SOLD') && auction.winner && (
-                            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                              <p className="text-green-700 font-semibold">
-                                🏆 Người thắng: {auction.winner}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                  {/* Loading State */}
+                  {isLoadingAuctions ? (
+                    <div className="text-center py-12">
+                      <Loader2 className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
+                      <p className="text-gray-600">Đang tải phiên đấu giá...</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tab: Đơn Hàng */}
-            {activeTab === 'orders' && (
-              <div className="space-y-4">
-                {MOCK_ORDERS.map((order) => (
-                  <div
-                    key={order.id}
-                    className="bg-gradient-to-r from-white to-blue-50 border border-blue-100 rounded-xl p-6 hover:shadow-lg transition-shadow"
-                  >
-                    <div className="flex gap-6">
-                      {/* Image */}
-                      <img
-                        src={order.image}
-                        alt={order.productName}
-                        className="w-32 h-32 object-cover rounded-lg"
-                      />
-
-                      {/* Content */}
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <p className="text-sm text-gray-500 mb-1">
-                              Mã đơn: <span className="font-semibold text-gray-700">{order.orderId}</span>
-                            </p>
-                            <h3 className="text-xl font-bold text-gray-800 mb-2">
-                              {order.productName}
-                            </h3>
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
-                              {translateStatus(order.status)}
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-500">Tổng tiền</p>
-                            <p className="text-2xl font-bold text-purple-600">
-                              {formatCurrency(order.amount)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Buyer Info */}
-                        <div className="bg-gray-50 rounded-lg p-4 mb-3">
-                          <h4 className="font-semibold text-gray-700 mb-2">👤 Thông tin người mua</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                            <p><span className="text-gray-600">Tên:</span> <span className="font-semibold">{order.buyer}</span></p>
-                            <p><span className="text-gray-600">Email:</span> <span className="font-semibold">{order.buyerEmail}</span></p>
-                            <p><span className="text-gray-600">SĐT:</span> <span className="font-semibold">{order.buyerPhone}</span></p>
-                            <p className="md:col-span-2">
-                              <span className="text-gray-600">Địa chỉ:</span> <span className="font-semibold">{order.shippingAddress}</span>
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Timeline */}
-                        <div className="flex items-center gap-3 text-sm mb-3">
-                          <div className="flex items-center gap-1 text-green-600">
-                            <CheckCircle className="w-4 h-4" />
-                            <span>Thanh toán: {formatDate(order.paidDate)}</span>
-                          </div>
-                          {order.shippedDate && (
-                            <>
-                              <span className="text-gray-400">→</span>
-                              <div className="flex items-center gap-1 text-blue-600">
-                                <CheckCircle className="w-4 h-4" />
-                                <span>Giao hàng: {formatDate(order.shippedDate)}</span>
-                              </div>
-                            </>
-                          )}
-                          {order.completedDate && (
-                            <>
-                              <span className="text-gray-400">→</span>
-                              <div className="flex items-center gap-1 text-purple-600">
-                                <CheckCircle className="w-4 h-4" />
-                                <span>Hoàn thành: {formatDate(order.completedDate)}</span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Tracking Code */}
-                        {order.trackingCode && (
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                            <p className="text-blue-700">
-                              📦 Mã vận đơn: <span className="font-mono font-bold">{order.trackingCode}</span>
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="flex gap-3">
-                          {order.status === 'PAID' && (
-                            <button 
-                              onClick={() => handleOpenShippingModal(order)}
-                              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
-                            >
-                              ✍️ Nhập mã vận đơn
-                            </button>
-                          )}
-                          {order.status === 'SHIPPING' && (
-                            <button className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold">
-                              📞 Liên hệ người mua
-                            </button>
-                          )}
-                          {order.status === 'COMPLETED' && !order.feedbackGiven && (
-                            <button className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold">
-                              ⭐ Đánh giá người mua
-                            </button>
-                          )}
-                          {order.status === 'COMPLETED' && order.feedbackGiven && (
-                            <div className="flex items-center gap-2 text-green-600">
-                              <CheckCircle className="w-5 h-5" />
-                              <span className="font-semibold">Đã đánh giá ({order.rating} ⭐)</span>
-                            </div>
-                          )}
-                          <button 
-                            onClick={() => handleOpenOrderDetail(order)}
-                            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                  ) : auctions.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-600">Không có phiên đấu giá nào</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Auctions List */}
+                      <div className="space-y-4 mb-6">
+                        {auctions.map((auction) => (
+                          <div
+                            key={auction.id}
+                            className="bg-gradient-to-r from-white to-purple-50 border border-purple-100 rounded-xl p-6 hover:shadow-lg transition-shadow"
                           >
-                            📄 Chi tiết đơn hàng
+                            <div className="flex gap-6">
+                              {/* Image */}
+                              {auction.product.images && auction.product.images[0] && (
+                                <img
+                                  src={auction.product.images[0].url}
+                                  alt={auction.product.name}
+                                  className="w-32 h-32 object-cover rounded-lg"
+                                />
+                              )}
+
+                              {/* Content */}
+                              <div className="flex-1">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div>
+                                    <h3 className="text-xl font-bold text-gray-800 mb-1">
+                                      {auction.product.name}
+                                    </h3>
+                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getAuctionStatusColor(auction.status)}`}>
+                                      {translateAuctionStatus(auction.status)}
+                                    </span>
+                                    {!auction.reservePriceMet && auction.status === 'ENDED' && (
+                                      <span className="ml-2 inline-block px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                                        Chưa đạt giá sàn
+                                      </span>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={() => navigate(`/auction/${auction.id}`)}
+                                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                                  >
+                                    Chi tiết
+                                  </button>
+                                </div>
+
+                                {/* Info Grid */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                                  <div>
+                                    <p className="text-gray-500 text-sm">Giá khởi điểm</p>
+                                    <p className="text-gray-800 font-semibold">
+                                      {formatCurrency(auction.startPrice)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 text-sm">Giá hiện tại</p>
+                                    <p className="text-purple-600 font-bold text-lg">
+                                      {formatCurrency(auction.currentPrice)}
+                                    </p>
+                                  </div>
+                                  {auction.buyNowPrice && (
+                                    <div>
+                                      <p className="text-gray-500 text-sm">Giá mua ngay</p>
+                                      <p className="text-green-600 font-semibold">
+                                        {formatCurrency(auction.buyNowPrice)}
+                                      </p>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-gray-500 text-sm">Danh mục</p>
+                                    <p className="text-gray-800 font-semibold">
+                                      {auction.product.category.name}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Timeline */}
+                                <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-4 h-4" />
+                                    <span>Bắt đầu: {formatDate(auction.startTime)}</span>
+                                  </div>
+                                  <span>→</span>
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-4 h-4" />
+                                    <span>Kết thúc: {formatDate(auction.endTime)}</span>
+                                  </div>
+                                </div>
+
+                                {/* Highest Bidder */}
+                                {auction.highestBidder && (
+                                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <p className="text-green-700 font-semibold">
+                                      🏆 Người đang dẫn đầu: {auction.highestBidder.firstName} {auction.highestBidder.lastName}
+                                    </p>
+                                    <p className="text-green-600 text-sm">{auction.highestBidder.email}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Pagination */}
+                      {auctionTotalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => setAuctionPage(prev => Math.max(1, prev - 1))}
+                            disabled={auctionPage === 1}
+                            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+
+                          {Array.from({ length: Math.min(auctionTotalPages, 5) }, (_, i) => {
+                            let page;
+                            if (auctionTotalPages <= 5) {
+                              page = i + 1;
+                            } else if (auctionPage <= 3) {
+                              page = i + 1;
+                            } else if (auctionPage >= auctionTotalPages - 2) {
+                              page = auctionTotalPages - 4 + i;
+                            } else {
+                              page = auctionPage - 2 + i;
+                            }
+                            return (
+                              <button
+                                key={page}
+                                onClick={() => setAuctionPage(page)}
+                                className={`px-4 py-2 rounded-lg font-medium ${auctionPage === page
+                                  ? 'bg-purple-500 text-white'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                  }`}
+                              >
+                                {page}
+                              </button>
+                            );
+                          })}
+
+                          <button
+                            onClick={() => setAuctionPage(prev => Math.min(auctionTotalPages, prev + 1))}
+                            disabled={auctionPage === auctionTotalPages}
+                            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronRight className="w-5 h-5" />
                           </button>
                         </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: Đơn Hàng */}
+              {activeTab === 'orders' && (
+                <div>
+                  {/* Sub-tabs: Đơn Bán Hàng vs Phí Giá Sàn */}
+                  <div className="flex gap-4 mb-6 border-b border-gray-200">
+                    <button
+                      onClick={() => {
+                        setOrderSubTab('sales');
+                        setSalesPage(1);
+                      }}
+                      className={`px-6 py-3 font-semibold transition-colors border-b-2 ${orderSubTab === 'sales'
+                        ? 'border-purple-500 text-purple-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
+                        }`}
+                    >
+                      📦 Đơn Bán Hàng
+                    </button>
+                    <button
+                      onClick={() => {
+                        setOrderSubTab('fees');
+                        setFeesPage(1);
+                      }}
+                      className={`px-6 py-3 font-semibold transition-colors border-b-2 ${orderSubTab === 'fees'
+                        ? 'border-purple-500 text-purple-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
+                        }`}
+                    >
+                      💰 Phí Giá Sàn
+                    </button>
+                  </div>
+
+                  {/* Sub-tab: Đơn Bán Hàng (AUCTION_SALE) */}
+                  {orderSubTab === 'sales' && (
+                    <div>
+                      {/* Filter */}
+                      <div className="flex gap-2 mb-6 flex-wrap">
+                        <button
+                          onClick={() => {
+                            setSelectedSalesStatus(undefined);
+                            setSalesPage(1);
+                          }}
+                          className={`px-4 py-2 rounded-lg font-medium transition-colors ${!selectedSalesStatus
+                            ? 'bg-purple-500 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                        >
+                          Tất cả
+                        </button>
+                        {(['PENDING', 'PAID', 'SHIPPING', 'COMPLETED', 'DISPUTE'] as InvoiceStatus[]).map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => {
+                              setSelectedSalesStatus(status);
+                              setSalesPage(1);
+                            }}
+                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedSalesStatus === status
+                              ? 'bg-purple-500 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                          >
+                            {translateOrderStatus(status)}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Loading State */}
+                      {isLoadingSales ? (
+                        <div className="text-center py-12">
+                          <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto mb-4" />
+                          <p className="text-gray-600">Đang tải đơn bán hàng...</p>
+                        </div>
+                      ) : sales.length === 0 ? (
+                        <div className="text-center py-12">
+                          <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-600">Không có đơn bán hàng nào</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Sales List */}
+                          <div className="space-y-4 mb-6">
+                            {sales.map((sale) => (
+                              <div
+                                key={sale.id}
+                                className="bg-gradient-to-r from-white to-blue-50 border border-blue-100 rounded-xl p-6 hover:shadow-lg transition-shadow"
+                              >
+                                <div className="flex gap-6">
+                                  {/* Image */}
+                                  {sale.product.images && sale.product.images[0] && (
+                                    <img
+                                      src={sale.product.images[0].url}
+                                      alt={sale.product.name}
+                                      className="w-32 h-32 object-cover rounded-lg"
+                                    />
+                                  )}
+
+                                  {/* Content */}
+                                  <div className="flex-1">
+                                    <div className="flex justify-between items-start mb-3">
+                                      <div>
+                                        <p className="text-sm text-gray-500 mb-1">
+                                          Mã đơn: <span className="font-semibold text-gray-700">INV-{sale.id}</span>
+                                        </p>
+                                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                                          {sale.product.name}
+                                        </h3>
+                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getOrderStatusColor(sale.status)}`}>
+                                          {translateOrderStatus(sale.status)}
+                                        </span>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-sm text-gray-500">Tổng tiền</p>
+                                        <p className="text-2xl font-bold text-purple-600">
+                                          {formatCurrency(sale.finalPrice)}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Buyer Info */}
+                                    <div className="bg-gray-50 rounded-lg p-4 mb-3">
+                                      <h4 className="font-semibold text-gray-700 mb-2">👤 Thông tin người mua</h4>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                        <p><span className="text-gray-600">Tên:</span> <span className="font-semibold">{sale.user.firstName} {sale.user.lastName}</span></p>
+                                        <p><span className="text-gray-600">Email:</span> <span className="font-semibold">{sale.user.email}</span></p>
+                                      </div>
+                                    </div>
+
+                                    {/* Timeline */}
+                                    <div className="flex items-center gap-3 text-sm mb-3">
+                                      <div className="flex items-center gap-1 text-green-600">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span>Tạo đơn: {formatDate(sale.createdAt)}</span>
+                                      </div>
+                                      {sale.dueDate && (
+                                        <>
+                                          <span className="text-gray-400">→</span>
+                                          <div className="flex items-center gap-1 text-orange-600">
+                                            <Clock className="w-4 h-4" />
+                                            <span>Hạn: {formatDate(sale.dueDate)}</span>
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex gap-3 flex-wrap">
+                                      {sale.status === 'PAID' && (
+                                        <button
+                                          onClick={() => handleOpenShippingModal(sale)}
+                                          className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+                                        >
+                                          ✍️ Nhập mã vận đơn
+                                        </button>
+                                      )}
+                                      {sale.status === 'DISPUTE' && (
+                                        <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-2 rounded-lg">
+                                          <AlertCircle className="w-5 h-5" />
+                                          <span className="font-semibold">Đang tranh chấp - Cần xử lý</span>
+                                        </div>
+                                      )}
+                                      {sale.status === 'COMPLETED' && (
+                                        <div className="flex items-center gap-2 text-green-600">
+                                          <CheckCircle className="w-5 h-5" />
+                                          <span className="font-semibold">Đã hoàn thành</span>
+                                        </div>
+                                      )}
+                                      <button
+                                        onClick={() => handleOpenOrderDetail(sale)}
+                                        className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                                      >
+                                        📄 Chi tiết đơn hàng
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Pagination */}
+                          {salesTotalPages > 1 && (
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => setSalesPage(prev => Math.max(1, prev - 1))}
+                                disabled={salesPage === 1}
+                                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ChevronLeft className="w-5 h-5" />
+                              </button>
+
+                              {Array.from({ length: Math.min(salesTotalPages, 5) }, (_, i) => {
+                                let page;
+                                if (salesTotalPages <= 5) {
+                                  page = i + 1;
+                                } else if (salesPage <= 3) {
+                                  page = i + 1;
+                                } else if (salesPage >= salesTotalPages - 2) {
+                                  page = salesTotalPages - 4 + i;
+                                } else {
+                                  page = salesPage - 2 + i;
+                                }
+                                return (
+                                  <button
+                                    key={page}
+                                    onClick={() => setSalesPage(page)}
+                                    className={`px-4 py-2 rounded-lg font-medium ${salesPage === page
+                                      ? 'bg-purple-500 text-white'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                      }`}
+                                  >
+                                    {page}
+                                  </button>
+                                );
+                              })}
+
+                              <button
+                                onClick={() => setSalesPage(prev => Math.min(salesTotalPages, prev + 1))}
+                                disabled={salesPage === salesTotalPages}
+                                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ChevronRight className="w-5 h-5" />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-tab: Phí Giá Sàn (LISTING_FEE) */}
+                  {orderSubTab === 'fees' && (
+                    <div>
+                      {/* Filter */}
+                      <div className="flex gap-2 mb-6 flex-wrap">
+                        <button
+                          onClick={() => {
+                            setSelectedFeesStatus(undefined);
+                            setFeesPage(1);
+                          }}
+                          className={`px-4 py-2 rounded-lg font-medium transition-colors ${!selectedFeesStatus
+                            ? 'bg-purple-500 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                        >
+                          Tất cả
+                        </button>
+                        {(['PENDING', 'PAID'] as InvoiceStatus[]).map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => {
+                              setSelectedFeesStatus(status);
+                              setFeesPage(1);
+                            }}
+                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedFeesStatus === status
+                              ? 'bg-purple-500 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                          >
+                            {translateOrderStatus(status)}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Loading State */}
+                      {isLoadingFees ? (
+                        <div className="text-center py-12">
+                          <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto mb-4" />
+                          <p className="text-gray-600">Đang tải phí giá sàn...</p>
+                        </div>
+                      ) : fees.length === 0 ? (
+                        <div className="text-center py-12">
+                          <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-600">Không có phí giá sàn nào</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Fees List */}
+                          <div className="space-y-4 mb-6">
+                            {fees.map((fee) => (
+                              <div
+                                key={fee.id}
+                                className="bg-gradient-to-r from-white to-orange-50 border border-orange-100 rounded-xl p-6 hover:shadow-lg transition-shadow"
+                              >
+                                <div className="flex gap-6">
+                                  {/* Image */}
+                                  {fee.product.images && fee.product.images[0] && (
+                                    <img
+                                      src={fee.product.images[0].url}
+                                      alt={fee.product.name}
+                                      className="w-32 h-32 object-cover rounded-lg"
+                                    />
+                                  )}
+
+                                  {/* Content */}
+                                  <div className="flex-1">
+                                    <div className="flex justify-between items-start mb-3">
+                                      <div>
+                                        <p className="text-sm text-gray-500 mb-1">
+                                          Mã hóa đơn: <span className="font-semibold text-gray-700">FEE-{fee.id}</span>
+                                        </p>
+                                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                                          {fee.product.name}
+                                        </h3>
+                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getOrderStatusColor(fee.status)}`}>
+                                          {translateOrderStatus(fee.status)}
+                                        </span>
+                                        <span className="ml-2 inline-block px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                                          💰 Phí Giá Sàn (5%)
+                                        </span>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-sm text-gray-500">Số tiền</p>
+                                        <p className="text-2xl font-bold text-orange-600">
+                                          {formatCurrency(fee.finalPrice)}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* Timeline */}
+                                    <div className="flex items-center gap-3 text-sm mb-3">
+                                      <div className="flex items-center gap-1 text-green-600">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span>Tạo: {formatDate(fee.createdAt)}</span>
+                                      </div>
+                                      {fee.dueDate && fee.status === 'PENDING' && (
+                                        <>
+                                          <span className="text-gray-400">→</span>
+                                          <div className="flex items-center gap-1 text-orange-600">
+                                            <Clock className="w-4 h-4" />
+                                            <span>Hạn thanh toán: {formatDate(fee.dueDate)}</span>
+                                          </div>
+                                        </>
+                                      )}
+                                      {fee.paymentTime && fee.status === 'PAID' && (
+                                        <>
+                                          <span className="text-gray-400">→</span>
+                                          <div className="flex items-center gap-1 text-blue-600">
+                                            <CheckCircle className="w-4 h-4" />
+                                            <span>Đã thanh toán: {formatDate(fee.paymentTime)}</span>
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+
+                                    {/* Status Actions */}
+                                    <div className="flex gap-3 flex-wrap">
+                                      {fee.status === 'PENDING' && (
+                                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2">
+                                          <Clock className="w-5 h-5 text-yellow-600" />
+                                          <span className="text-yellow-700 font-semibold">Chờ thanh toán - Vui lòng thanh toán để kích hoạt phiên đấu giá</span>
+                                        </div>
+                                      )}
+                                      {fee.status === 'PAID' && (
+                                        <div className="flex items-center gap-2 text-green-600">
+                                          <CheckCircle className="w-5 h-5" />
+                                          <span className="font-semibold">Đã hoàn tất thanh toán</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Pagination */}
+                          {feesTotalPages > 1 && (
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => setFeesPage(prev => Math.max(1, prev - 1))}
+                                disabled={feesPage === 1}
+                                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ChevronLeft className="w-5 h-5" />
+                              </button>
+
+                              {Array.from({ length: Math.min(feesTotalPages, 5) }, (_, i) => {
+                                let page;
+                                if (feesTotalPages <= 5) {
+                                  page = i + 1;
+                                } else if (feesPage <= 3) {
+                                  page = i + 1;
+                                } else if (feesPage >= feesTotalPages - 2) {
+                                  page = feesTotalPages - 4 + i;
+                                } else {
+                                  page = feesPage - 2 + i;
+                                }
+                                return (
+                                  <button
+                                    key={page}
+                                    onClick={() => setFeesPage(page)}
+                                    className={`px-4 py-2 rounded-lg font-medium ${feesPage === page
+                                      ? 'bg-purple-500 text-white'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                      }`}
+                                  >
+                                    {page}
+                                  </button>
+                                );
+                              })}
+
+                              <button
+                                onClick={() => setFeesPage(prev => Math.min(feesTotalPages, prev + 1))}
+                                disabled={feesPage === feesTotalPages}
+                                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ChevronRight className="w-5 h-5" />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: Thống Kê */}
+              {activeTab === 'stats' && (
+                <div className="space-y-6">
+                  {isLoadingStats ? (
+                    <div className="text-center py-12">
+                      <Loader2 className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
+                      <p className="text-gray-600">Đang tải thống kê...</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="inline-block p-6 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full mb-4">
+                        <TrendingUp className="w-16 h-16 text-purple-600" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                        Thống Kê Cửa Hàng
+                      </h2>
+                      <p className="text-gray-600 mb-8">
+                        Tổng quan về hoạt động kinh doanh của bạn
+                      </p>
+
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                        <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-xl p-8 shadow-lg">
+                          <Package className="w-12 h-12 mx-auto mb-4 opacity-90" />
+                          <p className="text-5xl font-bold mb-3">{stats.totalAuctions}</p>
+                          <p className="text-lg opacity-90">Tổng phiên đấu giá đã tạo</p>
+                          <p className="text-sm opacity-75 mt-2">Từ khi bắt đầu hoạt động</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-green-500 to-teal-500 text-white rounded-xl p-8 shadow-lg">
+                          <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-90" />
+                          <p className="text-4xl font-bold mb-3">{formatCurrency(stats.totalRevenue)}</p>
+                          <p className="text-lg opacity-90">Tổng doanh thu</p>
+                          <p className="text-sm opacity-75 mt-2">Từ các đơn hàng hoàn thành</p>
+                        </div>
+                      </div>
+
+                      {/* Additional Info */}
+                      <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl max-w-4xl mx-auto">
+                        <p className="text-blue-800 font-semibold mb-2">📊 Thông tin bổ sung</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div className="bg-white rounded-lg p-4">
+                            <p className="text-gray-600">Đang hoạt động</p>
+                            <p className="text-2xl font-bold text-green-600">{stats.activeAuctions}</p>
+                            <p className="text-xs text-gray-500 mt-1">Phiên đấu giá</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-4">
+                            <p className="text-gray-600">Đã bán thành công</p>
+                            <p className="text-2xl font-bold text-purple-600">{stats.soldItems}</p>
+                            <p className="text-xs text-gray-500 mt-1">Sản phẩm</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-4">
+                            <p className="text-gray-600">Chờ giao hàng</p>
+                            <p className="text-2xl font-bold text-orange-600">{stats.pendingOrders}</p>
+                            <p className="text-xs text-gray-500 mt-1">Đơn hàng</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Tab: Thống Kê */}
-            {activeTab === 'stats' && (
-              <div className="space-y-6">
-                <div className="text-center py-12">
-                  <div className="inline-block p-6 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full mb-4">
-                    <TrendingUp className="w-16 h-16 text-purple-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                    Thống Kê Chi Tiết
-                  </h2>
-                  <p className="text-gray-600 mb-8">
-                    Phần này sẽ hiển thị biểu đồ doanh thu, xu hướng đấu giá, và phân tích chi tiết
-                  </p>
-
-                  {/* Simple Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                    <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-xl p-6">
-                      <p className="text-3xl font-bold mb-2">{stats.totalAuctions}</p>
-                      <p className="opacity-90">Tổng phiên đấu giá</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-500 to-teal-500 text-white rounded-xl p-6">
-                      <p className="text-3xl font-bold mb-2">{formatCurrency(stats.totalRevenue)}</p>
-                      <p className="opacity-90">Tổng doanh thu</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-yellow-500 to-orange-500 text-white rounded-xl p-6">
-                      <p className="text-3xl font-bold mb-2">{stats.averageRating} ⭐</p>
-                      <p className="opacity-90">Đánh giá trung bình</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    {/* Modals */}
-    {selectedOrder && (
-      <>
-        <ShippingTrackingModal
-          isOpen={showShippingModal}
-          onClose={() => setShowShippingModal(false)}
-          onSubmit={handleSubmitTracking}
-          orderId={selectedOrder.orderId}
-          productName={selectedOrder.productName}
-        />
+      {/* Modals */}
+      {selectedOrder && (
+        <>
+          <ShippingTrackingModal
+            isOpen={showShippingModal}
+            onClose={() => setShowShippingModal(false)}
+            onSubmit={handleSubmitTracking}
+            orderId={`INV-${selectedOrder.id}`}
+            productName={selectedOrder.product.name}
+          />
 
-        <OrderDetailModal
-          isOpen={showOrderDetailModal}
-          onClose={() => setShowOrderDetailModal(false)}
-          order={selectedOrder}
-        />
-      </>
-    )}
-
-    {selectedAuction && (
-      <AuctionDetailModal
-        isOpen={showAuctionDetailModal}
-        onClose={() => setShowAuctionDetailModal(false)}
-        auction={selectedAuction}
-      />
-    )}
+          <OrderDetailModal
+            isOpen={showOrderDetailModal}
+            onClose={() => setShowOrderDetailModal(false)}
+            order={selectedOrder}
+          />
+        </>
+      )}
     </PageLayout>
   );
 };
