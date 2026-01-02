@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, ArrowLeft, Home } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, ArrowLeft, Home, FileText } from 'lucide-react';
 import PageLayout from './page-layout';
+import Invoice from './invoice';
 import { Button } from '@/components/ui/button';
 import { paymentService } from '@/services/paymentService';
 import type { PaymentResponse } from '@/types/auction';
@@ -88,7 +89,7 @@ const PaymentResult = () => {
                                 </div>
                                 <div className="flex justify-between items-center py-2 border-b border-gray-200">
                                     <span className="text-gray-600">Mã hóa đơn:</span>
-                                    <span className="font-semibold text-gray-900">{paymentResult.invoiceId || 'N/A'}</span>
+                                    <span className="font-semibold text-gray-900">#{paymentResult.invoiceId || 'N/A'}</span>
                                 </div>
                                 {paymentResult.paymentTime && (
                                     <div className="flex justify-between items-center py-2 border-b border-gray-200">
@@ -107,15 +108,27 @@ const PaymentResult = () => {
                             </div>
                         )}
 
+                        {/* Invoice Details - Only show on success */}
+                        {isSuccess && paymentResult?.invoiceId && (
+                            <div className="mb-8">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <FileText className="w-5 h-5 text-indigo-600" />
+                                    <h3 className="text-xl font-bold text-gray-900">Chi tiết hóa đơn</h3>
+                                </div>
+                                <Invoice invoiceId={paymentResult.invoiceId} />
+                            </div>
+                        )}
+
                         {/* Action Buttons */}
                         <div className="flex flex-col sm:flex-row gap-4">
                             {isSuccess ? (
                                 <>
                                     <Button
-                                        onClick={() => navigate('/seller/products')}
-                                        className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold py-3"
+                                        onClick={() => navigate('/user')}
+                                        className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3"
                                     >
-                                        Xem danh sách phiên đấu giá
+                                        <FileText className="w-4 h-4 mr-2" />
+                                        Xem đơn hàng của tôi
                                     </Button>
                                     <Button
                                         onClick={() => navigate('/')}
@@ -129,11 +142,11 @@ const PaymentResult = () => {
                             ) : (
                                 <>
                                     <Button
-                                        onClick={() => navigate('/create-auction')}
-                                        className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold py-3"
+                                        onClick={() => navigate('/user')}
+                                        className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3"
                                     >
                                         <ArrowLeft className="w-4 h-4 mr-2" />
-                                        Thử lại
+                                        Quay lại trang hóa đơn
                                     </Button>
                                     <Button
                                         onClick={() => navigate('/')}

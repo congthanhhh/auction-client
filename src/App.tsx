@@ -7,7 +7,6 @@ import UserDetail from './components/layout/user-detail'
 import ProductDetail from './components/layout/product-detail'
 import CreateAuction from './components/layout/create-auction'
 import NotificationsPage from './components/layout/notifications'
-import Cart from './components/layout/cart'
 import Payment from './components/layout/payment'
 import Shipping from './components/layout/shipping'
 import Invoice from './components/layout/invoice'
@@ -30,6 +29,7 @@ import { useAuthStore } from './stores/useAuthStore'
 import { useEffect } from 'react'
 import Authenticate from './components/pages/Authenticate.js'
 import CreateProduct from './components/layout/create-product.js'
+import MyOrder from './components/layout/MyOrder.js'
 
 function App() {
 
@@ -62,7 +62,7 @@ function App() {
         <Route path="/create-auction" element={<CreateAuction />} />
         <Route path="/create-product" element={<CreateProduct />} />
         <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/cart" element={<Cart />} />
+        <Route path="/my-orders" element={<MyOrder />} />
         <Route path="/payment" element={<Payment />} />
         <Route path="/payment-result" element={<PaymentResult />} />
         <Route path="/shipping/:trackingCode" element={<Shipping />} />

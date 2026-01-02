@@ -5,10 +5,10 @@ import type { InvoiceResponse, InvoiceStatus, ShipInvoiceRequest, MessageRespons
 import type { PageResponse } from "@/types/common";
 
 export const invoiceService = {
-    // GET /invoices/my-invoices - Get my invoices with pagination
-    getMyInvoices(page: number = 1, size: number = 10) {
+    // GET /invoices/my-invoices - Get my invoices with pagination, status, and type filters
+    getMyInvoices(params: { page?: number; size?: number; status?: InvoiceStatus; type?: 'AUCTION_SALE' | 'LISTING_FEE' }) {
         return axiosClient.get<PageResponse<InvoiceResponse>>('/invoices/my-invoices', {
-            params: { page, size }
+            params
         });
     },
 

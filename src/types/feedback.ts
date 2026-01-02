@@ -1,3 +1,14 @@
+export type FeedbackRating = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
+
+export interface FeedbackRequest {
+  rating: FeedbackRating;
+  comment?: string;
+}
+
+export interface MessageResponse {
+  message: string;
+}
+
 export interface Feedback {
   id: number;
   orderId: number;

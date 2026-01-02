@@ -142,23 +142,6 @@ const Header = () => {
               </span>
             </button>
 
-            <button
-              onClick={() => navigate('/cart')}
-              className="flex items-center space-x-2 hover:text-gray-300 transition-colors px-2 py-1 rounded relative"
-            >
-              <div className="relative">
-                <ShoppingCart className="w-5 h-5" />
-                {cartItemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                  </span>
-                )}
-              </div>
-              <span className="text-sm font-medium">
-                Giỏ hàng
-              </span>
-            </button>
-
             <div className="relative">
               <button
                 onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
@@ -257,17 +240,6 @@ const Header = () => {
             </h1>
 
             <div className="flex items-center space-x-3">
-              <button
-                onClick={() => navigate('/cart')}
-                className="text-white hover:text-gray-300 transition-colors relative"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                {cartItemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                    {cartItemsCount > 9 ? '9+' : cartItemsCount}
-                  </span>
-                )}
-              </button>
               <div className="relative">
                 <button
                   onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}

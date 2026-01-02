@@ -27,4 +27,20 @@ export interface SimpleUserResponse {
     firstName: string;
     lastName: string;
     email: string;
+    phoneNumber: string;
+}
+
+export interface UserProfileResponse {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string;
+    noPassword: boolean;
+    isActive: boolean;
+    strikeCount: number;
+    reputationScore: number;
+    createdAt: string;
+    roles: RoleResponse[];
 }

@@ -14,6 +14,7 @@ const CountdownTimer = ({ targetDate }: CountdownTimerProps) => {
         seconds: 0
     });
     const [isExpired, setIsExpired] = useState(false);
+    const [totalHours, setTotalHours] = useState(0);
 
     useEffect(() => {
         if (!targetDate) return;
@@ -32,10 +33,17 @@ const CountdownTimer = ({ targetDate }: CountdownTimerProps) => {
                     minutes: duration.minutes || 0,
                     seconds: duration.seconds || 0
                 });
+
+                // Tính tổng số giờ còn lại
+                const diffMs = target.getTime() - now.getTime();
+                const totalHoursLeft = Math.floor(diffMs / (1000 * 60 * 60));
+                setTotalHours(totalHoursLeft);
+
                 setIsExpired(false);
             } else {
                 // Hết giờ
                 setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+                setTotalHours(0);
                 setIsExpired(true);
             }
         };
@@ -56,56 +64,46 @@ const CountdownTimer = ({ targetDate }: CountdownTimerProps) => {
     // Giao diện khi đã kết thúc
     if (isExpired) {
         return (
-            <div className="w-full bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-                <span className="text-red-600 font-bold text-lg">ĐÃ KẾT THÚC</span>
-            </div>
+            <span className="text-red-600 font-semibold text-sm">Đã kết thúc</span>
         );
     }
 
-    // Giao diện đếm ngược (Giữ đúng style của bạn)
-    return (
-        <div className="flex items-center justify-center gap-3 text-center">
-            {/* Ngày - Chỉ hiển thị khi > 0 */}
-            {timeLeft.days > 0 && (
-                <>
-                    <div className="bg-white rounded-lg shadow-sm border border-yellow-200 p-2 w-16 lg:w-20">
-                        <span className="text-xl lg:text-2xl font-bold text-yellow-700 block animate-pulse-slow">
-                            {pad(timeLeft.days)}
-                        </span>
-                        <span className="text-[10px] text-gray-500 uppercase font-semibold">Ngày</span>
-                    </div>
-                    <span className="text-xl font-bold text-yellow-400 pb-4">:</span>
-                </>
-            )}
+    // Nếu thời gian còn lại > 24 giờ: hiển thị dạng text
+    if (totalHours >= 24) {
+        const daysText = timeLeft.days > 0 ? `${timeLeft.days} ngày` : '';
+        const hoursText = timeLeft.hours > 0 ? `${timeLeft.hours} giờ` : '';
 
+        return (
+            <span className="text-sm font-semibold text-gray-700">
+                {daysText} {hoursText}
+            </span>
+        );
+    }
+
+    // Nếu < 24 giờ: hiển thị ô đếm thời gian
+    return (
+        <div className="flex items-center gap-1">
             {/* Giờ */}
-            <div className="bg-white rounded-lg shadow-sm border border-yellow-200 p-2 w-16 lg:w-20">
-                <span className="text-xl lg:text-2xl font-bold text-yellow-700 block animate-pulse-slow">
+            <div className="bg-red-50 border border-red-200 rounded px-1.5 py-0.5">
+                <span className="text-sm font-bold text-red-600">
                     {pad(timeLeft.hours)}
                 </span>
-                <span className="text-[10px] text-gray-500 uppercase font-semibold">Giờ</span>
             </div>
-
-            {/* Dấu ngăn cách */}
-            <span className="text-xl font-bold text-yellow-400 pb-4">:</span>
+            <span className="text-xs font-bold text-red-500">:</span>
 
             {/* Phút */}
-            <div className="bg-white rounded-lg shadow-sm border border-yellow-200 p-2 w-16 lg:w-20">
-                <span className="text-xl lg:text-2xl font-bold text-yellow-700 block animate-pulse-slow">
+            <div className="bg-red-50 border border-red-200 rounded px-1.5 py-0.5">
+                <span className="text-sm font-bold text-red-600">
                     {pad(timeLeft.minutes)}
                 </span>
-                <span className="text-[10px] text-gray-500 uppercase font-semibold">Phút</span>
             </div>
-
-            {/* Dấu ngăn cách */}
-            <span className="text-xl font-bold text-yellow-400 pb-4">:</span>
+            <span className="text-xs font-bold text-red-500">:</span>
 
             {/* Giây */}
-            <div className="bg-white rounded-lg shadow-sm border border-yellow-200 p-2 w-16 lg:w-20">
-                <span className="text-xl lg:text-2xl font-bold text-yellow-700 block animate-pulse-slow">
+            <div className="bg-red-50 border border-red-200 rounded px-1.5 py-0.5">
+                <span className="text-sm font-bold text-red-600">
                     {pad(timeLeft.seconds)}
                 </span>
-                <span className="text-[10px] text-gray-500 uppercase font-semibold">Giây</span>
             </div>
         </div>
     );

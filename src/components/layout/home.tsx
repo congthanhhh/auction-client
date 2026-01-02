@@ -114,16 +114,20 @@ const Home = () => {
     scheduledAuctions,
     scheduledLoading,
     fetchActiveAuctions,
-    fetchScheduledAuctions
+    fetchScheduledAuctions,
+
+    popularAuctions,
+    popularLoading,
+    bidCounts,
+    fetchPopularAuctions,
   } = useAuctionListStore();
 
   // Fetch auctions khi component mount
   useEffect(() => {
-    // Lấy 6 sản phẩm active cho trang home (page 1, size 6)
     fetchActiveAuctions(1, 6);
-    // Lấy 6 sản phẩm scheduled cho trang home
     fetchScheduledAuctions(1, 6);
-  }, [fetchActiveAuctions, fetchScheduledAuctions]);
+    fetchPopularAuctions();
+  }, [fetchActiveAuctions, fetchScheduledAuctions, fetchPopularAuctions]);
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -211,87 +215,91 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Auction Section */}
+      {/* Featured Auction Section - Popular Products Carousel */}
       <section className="bg-gray-50 py-8 sm:py-12 lg:py-16">
         <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-12 max-w-7xl">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-8 lg:mb-12">
-            ĐẤU GIÁ <span className="text-orange-600">NỔI BẬT</span>
+            SẢN PHẨM <span className="text-orange-600">PHỔ BIẾN</span>
           </h2>
 
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="grid md:grid-cols-2 gap-0">
-              {/* Product Image Section */}
-              <div className="bg-black p-6 lg:p-12 flex items-center justify-center">
-                <div className="flex gap-4 lg:gap-6">
-                  {/* Gray iPhone */}
-                  <div className="transform -rotate-12 hover:rotate-0 transition-transform duration-300">
-                    <div className="w-32 h-56 lg:w-40 lg:h-72 bg-gradient-to-b from-gray-300 to-gray-600 rounded-3xl relative shadow-2xl">
-                      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center">
-                        <div className="grid grid-cols-2 gap-1">
-                          <div className="w-3 h-3 bg-black rounded-full"></div>
-                          <div className="w-2 h-2 bg-black rounded-full"></div>
-                          <div className="w-2 h-2 bg-black rounded-full"></div>
-                          <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
-                        </div>
-                      </div>
-                      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-gray-400 rounded-full opacity-30"></div>
-                    </div>
-                  </div>
-
-                  {/* Orange iPhone */}
-                  <div className="transform rotate-12 hover:rotate-0 transition-transform duration-300">
-                    <div className="w-32 h-56 lg:w-40 lg:h-72 bg-gradient-to-b from-orange-400 to-orange-600 rounded-3xl relative shadow-2xl">
-                      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-16 h-16 bg-orange-900 rounded-2xl flex items-center justify-center">
-                        <div className="grid grid-cols-2 gap-1">
-                          <div className="w-3 h-3 bg-black rounded-full"></div>
-                          <div className="w-2 h-2 bg-black rounded-full"></div>
-                          <div className="w-2 h-2 bg-black rounded-full"></div>
-                          <div className="w-1 h-1 bg-orange-700 rounded-full"></div>
-                        </div>
-                      </div>
-                      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-8 h-8 bg-orange-300 rounded-full opacity-30"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Product Info Section */}
-              <div className="p-6 lg:p-12 flex flex-col justify-center">
-                <div className="mb-4">
-                  <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">NỔI BẬT</span>
-                </div>
-
-                <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
-                  iPhone 17 series
-                </h3>
-
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  iPhone 17 Pro và iPhone 17 Pro Max được thiết kế từ trong ra ngoài để trở thành những phiên bản iPhone mạnh mẽ nhất. Cốt lõi của thiết kế mới là vỏ máy nguyên khối nhôm rèn nhịt tăng tối đa độ bền bỉ, hiệu năng và dung lượng pin.
-                </p>
-
-                {/* Price and Timer in one container */}
-                <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
-                  {/* Price Section */}
-                  <div className="flex-1">
-                    <p className="text-gray-600 text-sm mb-1">Giá đấu hiện tại</p>
-                    <p className="text-3xl font-bold text-blue-600">19.999.999 VNĐ</p>
-                  </div>
-
-                  {/* Countdown Timer */}
-                  <div className="lg:flex-shrink-0">
-                    <CountdownTimer endTime={new Date(Date.now() + 23 * 60 * 60 * 1000 + 12 * 60 * 1000 + 59 * 1000)} />
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => navigate('/auction/iphone-17-series')}
-                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-bold py-4 px-6 rounded-lg text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                >
-                  THAM GIA ĐẤU GIÁ
-                </button>
-              </div>
+          {popularLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-600"></div>
             </div>
-          </div>
+          ) : popularAuctions.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">Chưa có sản phẩm phổ biến</p>
+            </div>
+          ) : (
+            <Carousel
+              className="w-full"
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              plugins={[
+                Autoplay({
+                  delay: 4000,
+                }),
+              ]}
+            >
+              <CarouselContent className="-ml-2 md:-ml-4">
+                {popularAuctions.map((auction) => {
+                  const bidCount = bidCounts[auction.product.id] || 0;
+                  const endTime = new Date(auction.endTime);
+
+                  return (
+                    <CarouselItem key={auction.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
+                      <div
+                        className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group h-full"
+                        onClick={() => navigate(`/auction/${auction.id}`)}
+                      >
+                        <div className="relative overflow-hidden">
+                          <img
+                            src={auction.product.images[0]?.url || 'https://picsum.photos/200/300'}
+                            alt={auction.product.name}
+                            className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                            🔥 HOT
+                          </div>
+                          <div className="absolute bottom-3 left-3 bg-black/70 text-white px-3 py-1 rounded-lg text-xs">
+                            {bidCount} lượt đấu giá
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 text-base group-hover:text-purple-600 transition-colors">
+                            {auction.product.name}
+                          </h3>
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-500 mb-1">Giá hiện tại</p>
+                            <p className="text-2xl font-bold text-purple-600">
+                              {formatCurrency(auction.currentPrice)}
+                            </p>
+                          </div>
+                          <div className="mb-3 pb-3 border-b">
+                            <p className="text-xs text-gray-500">Thời gian còn lại</p>
+                            <CountdownTimer endTime={endTime} />
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/auction/${auction.id}`);
+                            }}
+                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all text-sm"
+                          >
+                            Đặt giá ngay
+                          </button>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  );
+                })}
+              </CarouselContent>
+              <CarouselPrevious className="hidden md:flex -left-4 lg:-left-12" />
+              <CarouselNext className="hidden md:flex -right-4 lg:-right-12" />
+            </Carousel>
+          )}
         </div>
       </section>
 
@@ -310,66 +318,68 @@ const Home = () => {
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {activeAuctions.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <p className="text-gray-500 text-lg">Chưa có phiên đấu giá nào đang diễn ra</p>
               </div>
             ) : (
-              activeAuctions.map((auction) => (
-                <div
-                  key={auction.id}
-                  className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
-                  onClick={() => navigate(`/auction/${auction.id}`)}
-                >
-                  {/* Image */}
-                  <div className="relative overflow-hidden">
-                    <img
-                      src={auction.product.images[0]?.url || 'https://via.placeholder.com/400'}
-                      alt={auction.product.name}
-                      className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                      ⏰ Đang diễn ra
-                    </div>
-                  </div>
+              activeAuctions.map((auction) => {
+                const endTime = new Date(auction.endTime);
+                const bidCount = bidCounts[auction.product.id] || 0;
 
-                  {/* Content */}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
-                      {auction.product.name}
-                    </h3>
-
-                    <div className="mb-3">
-                      <p className="text-xs text-gray-500">Giá hiện tại</p>
-                      <p className="text-xl font-bold text-purple-600">
-                        {formatCurrency(auction.currentPrice)}
-                      </p>
+                return (
+                  <div
+                    key={auction.id}
+                    className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
+                    onClick={() => navigate(`/auction/${auction.id}`)}
+                  >
+                    {/* Image */}
+                    <div className="relative overflow-hidden">
+                      <img
+                        src={auction.product.images[0]?.url || 'https://picsum.photos/200/300'}
+                        alt={auction.product.name}
+                        className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute top-2 right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg">
+                        ⏰ ĐANG DIỄN RA
+                      </div>
+                      <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded-lg text-xs">
+                        {bidCount} lượt đấu giá
+                      </div>
                     </div>
 
-                    {auction.buyNowPrice && (
-                      <div className="mb-3">
-                        <p className="text-xs text-gray-500">Giá mua ngay</p>
-                        <p className="text-sm font-semibold text-green-600">
-                          {formatCurrency(auction.buyNowPrice)}
+                    {/* Content */}
+                    <div className="p-3">
+                      <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 text-sm group-hover:text-purple-600 transition-colors">
+                        {auction.product.name}
+                      </h3>
+
+                      <div className="mb-2">
+                        <p className="text-xs text-gray-500 mb-1">Giá hiện tại</p>
+                        <p className="text-lg font-bold text-purple-600">
+                          {formatCurrency(auction.currentPrice)}
                         </p>
                       </div>
-                    )}
 
-                    <div className="flex gap-2">
+                      <div className="mb-2 pb-2 border-b">
+                        <p className="text-xs text-gray-500">Thời gian còn lại</p>
+                        <CountdownTimer endTime={endTime} />
+                      </div>
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/auction/${auction.id}`);
                         }}
-                        className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
+                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all text-xs"
                       >
-                        Đặt giá
+                        Đặt giá ngay
                       </button>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>
@@ -387,66 +397,76 @@ const Home = () => {
               Xem tất cả
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {scheduledAuctions.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <p className="text-gray-500 text-lg">Chưa có phiên đấu giá nào sắp diễn ra</p>
               </div>
             ) : (
-              scheduledAuctions.map((auction) => (
-                <div
-                  key={auction.id}
-                  className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
-                  onClick={() => navigate(`/auction/${auction.id}`)}
-                >
-                  {/* Image */}
-                  <div className="relative overflow-hidden">
-                    <img
-                      src={auction.product.images[0]?.url || 'https://via.placeholder.com/400'}
-                      alt={auction.product.name}
-                      className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <div className="absolute top-3 right-3 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                      🕒 Sắp diễn ra
+              scheduledAuctions.map((auction) => {
+                const startTime = new Date(auction.startTime);
+                const formattedStartTime = startTime.toLocaleString('vi-VN', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+
+                return (
+                  <div
+                    key={auction.id}
+                    className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group border border-gray-200"
+                    onClick={() => navigate(`/auction/${auction.id}`)}
+                  >
+                    {/* Image */}
+                    <div className="relative overflow-hidden">
+                      <img
+                        src={auction.product.images[0]?.url || 'https://picsum.photos/200/300'}
+                        alt={auction.product.name}
+                        className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute top-2 right-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg">
+                        🕒 SẮP DIỄN RA
+                      </div>
+                      <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded-lg text-xs">
+                        Chưa có lượt đấu giá
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Content */}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
-                      {auction.product.name}
-                    </h3>
+                    {/* Content */}
+                    <div className="p-3">
+                      <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 text-sm group-hover:text-purple-600 transition-colors">
+                        {auction.product.name}
+                      </h3>
 
-                    <div className="mb-3">
-                      <p className="text-xs text-gray-500">Giá khởi điểm</p>
-                      <p className="text-xl font-bold text-purple-600">
-                        {formatCurrency(auction.startPrice)}
-                      </p>
-                    </div>
-
-                    {auction.buyNowPrice && (
-                      <div className="mb-3">
-                        <p className="text-xs text-gray-500">Giá mua ngay</p>
-                        <p className="text-sm font-semibold text-green-600">
-                          {formatCurrency(auction.buyNowPrice)}
+                      <div className="mb-2">
+                        <p className="text-xs text-gray-500 mb-1">Giá khởi điểm</p>
+                        <p className="text-lg font-bold text-purple-600">
+                          {formatCurrency(auction.startPrice)}
                         </p>
                       </div>
-                    )}
 
-                    <div className="flex gap-2">
+                      <div className="mb-2 pb-2 border-b">
+                        <p className="text-xs text-gray-500 mb-1">Thời gian bắt đầu</p>
+                        <p className="text-xs font-semibold text-blue-600">
+                          {formattedStartTime}
+                        </p>
+                      </div>
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/auction/${auction.id}`);
                         }}
-                        className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all"
+                        className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all text-xs"
                       >
                         Xem chi tiết
                       </button>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>

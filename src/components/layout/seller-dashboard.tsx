@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TrendingUp, ShoppingCart, Clock, CheckCircle, AlertCircle, Star, Loader2, ChevronLeft, ChevronRight, DollarSign } from 'lucide-react';
+import { Package, TrendingUp, ShoppingCart, Clock, CheckCircle, AlertCircle, Star, Loader2, DollarSign } from 'lucide-react';
 import PageLayout from './page-layout';
 import ShippingTrackingModal from '../pop-up/shipping-tracking-modal';
 import OrderDetailModal from '../pop-up/order-detail-modal';
+import Pagination from '@/components/ui/pagination';
 import { toast } from 'sonner';
 import { auctionService } from '@/services/auctionService';
 import { invoiceService, type SellerRevenueResponse } from '@/services/invoiceService';
@@ -29,24 +30,27 @@ const SellerDashboard = () => {
   const [isLoadingAuctions, setIsLoadingAuctions] = useState(false);
   const [auctionPage, setAuctionPage] = useState(1);
   const [auctionTotalPages, setAuctionTotalPages] = useState(1);
+  const [auctionTotalElements, setAuctionTotalElements] = useState(0);
 
   // API State - Sales (AUCTION_SALE invoices)
   const [sales, setSales] = useState<InvoiceResponse[]>([]);
   const [isLoadingSales, setIsLoadingSales] = useState(false);
   const [salesPage, setSalesPage] = useState(1);
   const [salesTotalPages, setSalesTotalPages] = useState(1);
+  const [salesTotalElements, setSalesTotalElements] = useState(0);
 
   // API State - Listing Fees (LISTING_FEE invoices)
   const [fees, setFees] = useState<InvoiceResponse[]>([]);
   const [isLoadingFees, setIsLoadingFees] = useState(false);
   const [feesPage, setFeesPage] = useState(1);
   const [feesTotalPages, setFeesTotalPages] = useState(1);
+  const [feesTotalElements, setFeesTotalElements] = useState(0);
 
   // API State - Seller Statistics
   const [sellerStats, setSellerStats] = useState<SellerRevenueResponse | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
-  const pageSize = 10;
+  const pageSize = 5;
 
   // Fetch Seller Stats on mount
   useEffect(() => {
@@ -97,6 +101,7 @@ const SellerDashboard = () => {
       });
       setAuctions(response.data.data);
       setAuctionTotalPages(response.data.totalPages);
+      setAuctionTotalElements(response.data.totalElements);
     } catch (error: any) {
       console.error('Error fetching auctions:', error);
       toast.error('Không thể tải danh sách phiên đấu giá');
@@ -115,6 +120,7 @@ const SellerDashboard = () => {
       });
       setSales(response.data.data);
       setSalesTotalPages(response.data.totalPages);
+      setSalesTotalElements(response.data.totalElements);
     } catch (error: any) {
       console.error('Error fetching sales:', error);
       toast.error('Không thể tải danh sách đơn bán hàng');
@@ -133,6 +139,7 @@ const SellerDashboard = () => {
       });
       setFees(response.data.data);
       setFeesTotalPages(response.data.totalPages);
+      setFeesTotalElements(response.data.totalElements);
     } catch (error: any) {
       console.error('Error fetching listing fees:', error);
       toast.error('Không thể tải danh sách phí giá sàn');
@@ -199,7 +206,8 @@ const SellerDashboard = () => {
       'ACTIVE': 'Đang đấu giá',
       'ENDED': 'Đã kết thúc',
       'WAITING_PAYMENT': 'Chờ thanh toán',
-      'CANCELLED': 'Đã hủy'
+      'CANCELLED': 'Đã hủy',
+      'FAILED': 'Thất bại'
     };
     return translations[status];
   };
@@ -521,48 +529,13 @@ const SellerDashboard = () => {
 
                       {/* Pagination */}
                       {auctionTotalPages > 1 && (
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => setAuctionPage(prev => Math.max(1, prev - 1))}
-                            disabled={auctionPage === 1}
-                            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <ChevronLeft className="w-5 h-5" />
-                          </button>
-
-                          {Array.from({ length: Math.min(auctionTotalPages, 5) }, (_, i) => {
-                            let page;
-                            if (auctionTotalPages <= 5) {
-                              page = i + 1;
-                            } else if (auctionPage <= 3) {
-                              page = i + 1;
-                            } else if (auctionPage >= auctionTotalPages - 2) {
-                              page = auctionTotalPages - 4 + i;
-                            } else {
-                              page = auctionPage - 2 + i;
-                            }
-                            return (
-                              <button
-                                key={page}
-                                onClick={() => setAuctionPage(page)}
-                                className={`px-4 py-2 rounded-lg font-medium ${auctionPage === page
-                                  ? 'bg-purple-500 text-white'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                  }`}
-                              >
-                                {page}
-                              </button>
-                            );
-                          })}
-
-                          <button
-                            onClick={() => setAuctionPage(prev => Math.min(auctionTotalPages, prev + 1))}
-                            disabled={auctionPage === auctionTotalPages}
-                            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <ChevronRight className="w-5 h-5" />
-                          </button>
-                        </div>
+                        <Pagination
+                          currentPage={auctionPage}
+                          totalPages={auctionTotalPages}
+                          onPageChange={setAuctionPage}
+                          itemsPerPage={pageSize}
+                          totalItems={auctionTotalElements}
+                        />
                       )}
                     </>
                   )}
@@ -689,8 +662,9 @@ const SellerDashboard = () => {
                                     {/* Buyer Info */}
                                     <div className="bg-gray-50 rounded-lg p-4 mb-3">
                                       <h4 className="font-semibold text-gray-700 mb-2">👤 Thông tin người mua</h4>
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                                         <p><span className="text-gray-600">Tên:</span> <span className="font-semibold">{sale.user.firstName} {sale.user.lastName}</span></p>
+                                        <p><span className="text-gray-600">Số điện thoại:</span> <span className="font-semibold">{sale.user.phoneNumber}</span></p>
                                         <p><span className="text-gray-600">Email:</span> <span className="font-semibold">{sale.user.email}</span></p>
                                       </div>
                                     </div>
@@ -749,48 +723,13 @@ const SellerDashboard = () => {
 
                           {/* Pagination */}
                           {salesTotalPages > 1 && (
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => setSalesPage(prev => Math.max(1, prev - 1))}
-                                disabled={salesPage === 1}
-                                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <ChevronLeft className="w-5 h-5" />
-                              </button>
-
-                              {Array.from({ length: Math.min(salesTotalPages, 5) }, (_, i) => {
-                                let page;
-                                if (salesTotalPages <= 5) {
-                                  page = i + 1;
-                                } else if (salesPage <= 3) {
-                                  page = i + 1;
-                                } else if (salesPage >= salesTotalPages - 2) {
-                                  page = salesTotalPages - 4 + i;
-                                } else {
-                                  page = salesPage - 2 + i;
-                                }
-                                return (
-                                  <button
-                                    key={page}
-                                    onClick={() => setSalesPage(page)}
-                                    className={`px-4 py-2 rounded-lg font-medium ${salesPage === page
-                                      ? 'bg-purple-500 text-white'
-                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                      }`}
-                                  >
-                                    {page}
-                                  </button>
-                                );
-                              })}
-
-                              <button
-                                onClick={() => setSalesPage(prev => Math.min(salesTotalPages, prev + 1))}
-                                disabled={salesPage === salesTotalPages}
-                                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <ChevronRight className="w-5 h-5" />
-                              </button>
-                            </div>
+                            <Pagination
+                              currentPage={salesPage}
+                              totalPages={salesTotalPages}
+                              onPageChange={setSalesPage}
+                              itemsPerPage={pageSize}
+                              totalItems={salesTotalElements}
+                            />
                           )}
                         </>
                       )}
@@ -935,48 +874,13 @@ const SellerDashboard = () => {
 
                           {/* Pagination */}
                           {feesTotalPages > 1 && (
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => setFeesPage(prev => Math.max(1, prev - 1))}
-                                disabled={feesPage === 1}
-                                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <ChevronLeft className="w-5 h-5" />
-                              </button>
-
-                              {Array.from({ length: Math.min(feesTotalPages, 5) }, (_, i) => {
-                                let page;
-                                if (feesTotalPages <= 5) {
-                                  page = i + 1;
-                                } else if (feesPage <= 3) {
-                                  page = i + 1;
-                                } else if (feesPage >= feesTotalPages - 2) {
-                                  page = feesTotalPages - 4 + i;
-                                } else {
-                                  page = feesPage - 2 + i;
-                                }
-                                return (
-                                  <button
-                                    key={page}
-                                    onClick={() => setFeesPage(page)}
-                                    className={`px-4 py-2 rounded-lg font-medium ${feesPage === page
-                                      ? 'bg-purple-500 text-white'
-                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                      }`}
-                                  >
-                                    {page}
-                                  </button>
-                                );
-                              })}
-
-                              <button
-                                onClick={() => setFeesPage(prev => Math.min(feesTotalPages, prev + 1))}
-                                disabled={feesPage === feesTotalPages}
-                                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <ChevronRight className="w-5 h-5" />
-                              </button>
-                            </div>
+                            <Pagination
+                              currentPage={feesPage}
+                              totalPages={feesTotalPages}
+                              onPageChange={setFeesPage}
+                              itemsPerPage={pageSize}
+                              totalItems={feesTotalElements}
+                            />
                           )}
                         </>
                       )}
@@ -1020,7 +924,6 @@ const SellerDashboard = () => {
                           <p className="text-sm opacity-75 mt-2">Từ các đơn hàng hoàn thành</p>
                         </div>
                       </div>
-
                       {/* Additional Info */}
                       <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl max-w-4xl mx-auto">
                         <p className="text-blue-800 font-semibold mb-2">📊 Thông tin bổ sung</p>

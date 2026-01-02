@@ -14,7 +14,9 @@ interface AuctionState {
     reservePriceMet: boolean;
     startPrice: number;
     buyNowPrice: number | null;
+    startTime: string | null;
     endTime: string | null;
+    status: string | null;
     myMaxBid: number | null;
 
     initializeSocket: (sessionId: number) => void;
@@ -33,7 +35,9 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
     reservePriceMet: false,
     startPrice: 0,
     buyNowPrice: null,
+    startTime: null,
     endTime: null,
+    status: null,
     myMaxBid: null,
 
     fetchAuctionDetail: async (sessionId: number) => {
@@ -51,7 +55,9 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
 
                 reservePriceMet: sessionData.reservePriceMet,
                 highestBidder: sessionData.highestBidder ? sessionData.highestBidder.username : 'Chưa có',
+                startTime: sessionData.startTime,
                 endTime: sessionData.endTime,
+                status: sessionData.status,
                 myMaxBid: sessionData.myMaxBid
             });
 

@@ -107,11 +107,6 @@ const CreateProduct = () => {
     // Handle product submit
     const handleProductSubmit = async (createAuction: boolean) => {
         // Validation
-        if (images.length === 0) {
-            toast.error('Vui lòng thêm ít nhất 1 ảnh');
-            return;
-        }
-
         if (!formData.name.trim()) {
             toast.error('Vui lòng nhập tên sản phẩm');
             return;
@@ -143,7 +138,7 @@ const CreateProduct = () => {
                 startPrice: Number(formData.startPrice),
                 categoryId: Number(formData.categoryId),
                 attributes: attributesString || '',
-                imageIds: images.map((img) => img.id),
+                imageIds: images.length > 0 ? images.map((img) => img.id) : [],
             };
 
             const response = await productService.createProduct(productRequest);
@@ -206,7 +201,7 @@ const CreateProduct = () => {
                             {/* Hình ảnh sản phẩm */}
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-3">
-                                    Hình ảnh sản phẩm <span className="text-red-500">*</span>
+                                    Hình ảnh sản phẩm <span className="text-gray-500 font-normal">(Tùy chọn)</span>
                                     <span className="text-gray-500 font-normal ml-2">({images.length}/4)</span>
                                 </label>
                                 <div className="grid grid-cols-3 md:grid-cols-5 gap-3">

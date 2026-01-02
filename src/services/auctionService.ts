@@ -30,12 +30,12 @@ export const auctionService = {
         });
     },
 
-    // // GET /auction-sessions - Lấy danh sách phiên đấu giá của seller (with filter)
-    // getMyAuctionSessions(params: { status?: 'SCHEDULED' | 'ACTIVE' | 'ENDED'; page?: number; size?: number }) {
-    //     return axiosClient.get<PageResponse<AuctionSessionResponse>>('/auction-sessions', {
-    //         params
-    //     });
-    // },
+    // GET /auction-sessions/my-joined - Lấy các phiên đấu giá user đang tham gia
+    getMyJoinedSessions(params: { status?: AuctionStatus; page?: number; size?: number }) {
+        return axiosClient.get<PageResponse<AuctionSessionResponse>>('/auction-sessions/my-joined', {
+            params
+        });
+    },
 
     // POST create auction session (Bước 3 sau khi tạo product)
     createAuctionSession(data: CreateAuctionSessionRequest) {
@@ -50,5 +50,13 @@ export const auctionService = {
     // DELETE auction session
     deleteAuctionSession(sessionId: number) {
         return axiosClient.delete(`/auction-sessions/${sessionId}`);
+    },
+
+    getTopPopularSessions() {
+        return axiosClient.get<AuctionSessionResponse[]>('/auction-sessions/top-popular');
+    },
+
+    getBidCountByProduct(productId: number) {
+        return axiosClient.get<number>(`/auction-sessions/count/${productId}`);
     }
 };
