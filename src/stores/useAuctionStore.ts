@@ -4,6 +4,7 @@ import type { BidResponse, PriceUpdatePayload } from '@/types/bid';
 import { bidService } from '@/services/bidService';
 import type { NotificationResponse } from '@/types/common';
 import { auctionService } from '@/services/auctionService';
+import type { Product } from '@/types/product';
 
 interface AuctionState {
     currentPrice: number;
@@ -18,11 +19,19 @@ interface AuctionState {
     endTime: string | null;
     status: string | null;
     myMaxBid: number | null;
+    product: Product | null;
+
+    // Bid history pagination
+    bidHistoryPage: number;
+    bidHistoryTotalPages: number;
+    bidHistoryTotalElements: number;
+    isLoadingBidHistory: boolean;
 
     initializeSocket: (sessionId: number) => void;
     leaveSocket: (sessionId: number) => void;
     placeBid: (sessionId: number, amount: number) => Promise<void>;
     fetchAuctionDetail: (sessionId: number) => Promise<void>;
+    fetchBidHistory: (sessionId: number, page: number) => Promise<void>;
     addSessionNotification: (notif: NotificationResponse) => void;
 }
 
@@ -39,6 +48,13 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
     endTime: null,
     status: null,
     myMaxBid: null,
+    product: null,
+
+    // Bid history pagination
+    bidHistoryPage: 1,
+    bidHistoryTotalPages: 1,
+    bidHistoryTotalElements: 0,
+    isLoadingBidHistory: false,
 
     fetchAuctionDetail: async (sessionId: number) => {
         try {
@@ -58,18 +74,32 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
                 startTime: sessionData.startTime,
                 endTime: sessionData.endTime,
                 status: sessionData.status,
-                myMaxBid: sessionData.myMaxBid
+                myMaxBid: sessionData.myMaxBid,
+                product: sessionData.product // Lưu product từ response
             });
 
-            // 2. Lấy lịch sử đấu giá
-            const history = await bidService.getBidHistory(sessionId, 1, 10);
-            if (history.data.data.length > 0) {
-                set({ recentBids: history.data.data });
-            } else {
-                set({ recentBids: [] });
-            }
+            // 2. Lấy lịch sử đấu giá (trang 1)
+            await get().fetchBidHistory(sessionId, 1);
         } catch (error) {
             console.error("Lỗi tải chi tiết phiên:", error);
+        }
+    },
+
+    fetchBidHistory: async (sessionId: number, page: number) => {
+        try {
+            set({ isLoadingBidHistory: true });
+            const history = await bidService.getBidHistory(sessionId, page, 10);
+
+            set({
+                recentBids: history.data.data,
+                bidHistoryPage: history.data.currentPage,
+                bidHistoryTotalPages: history.data.totalPages,
+                bidHistoryTotalElements: history.data.totalElements,
+                isLoadingBidHistory: false
+            });
+        } catch (error) {
+            console.error("Lỗi tải lịch sử bid:", error);
+            set({ isLoadingBidHistory: false });
         }
     },
 

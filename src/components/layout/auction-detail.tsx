@@ -1,71 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Heart, Share2, Printer, Facebook } from 'lucide-react';
+import { Heart, Share2, Printer, Facebook, Loader2, HelpCircle, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import PageLayout from './page-layout';
 import { useAuctionStore } from '@/stores/useAuctionStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { formatJavaDate } from '@/lib/dateUtils';
 import CountdownTimer from './CountdownTimer';
-
-// Mock Product Data
-const MOCK_PRODUCT = {
-  id: 1,
-  name: "Powers On IOB EUFY ROBOVAC 25C",
-  description: `Robot hút bụi thông minh EUFY ROBOVAC 25C với công nghệ hút mạnh mẽ và điều khiển qua ứng dụng di động.
-
-Đặc điểm nổi bật:
-- Công suất hút 1500Pa
-- Pin 2600mAh, thời gian hoạt động 100 phút
-- Kết nối WiFi, điều khiển qua app
-- Tự động sạc khi pin yếu
-- Thiết kế mỏng chỉ 7.2cm, dễ dàng lau dọn gầm sofa, giường
-- Cảm biến chống va chạm và chống rơi
-
-Tình trạng: Đã qua sử dụng, hoạt động tốt. Có một số vết xước nhỏ bên ngoài nhưng không ảnh hưởng đến chức năng.
-
-Bao gồm:
-- Robot hút bụi
-- Dock sạc
-- Bộ lọc phụ
-- Chổi quét phụ
-- Hướng dẫn sử dụng`,
-  startPrice: 1500000,
-  createdAt: "2024-12-15T10:00:00",
-  category: {
-    id: 3,
-    name: "Đồ gia dụng",
-    description: "Thiết bị điện tử và đồ gia dụng"
-  },
-  seller: {
-    username: "goodwill_store",
-    firstName: "Heart of Texas",
-    lastName: "Goodwill",
-    email: "contact@goodwill.org"
-  },
-  attributes: "Màu sắc: Xanh đen, Trọng lượng: 2.7kg, Kích thước: 32.5 x 32.5 x 7.2cm, Công suất: 25W",
-  images: [
-    {
-      id: 1,
-      url: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
-    },
-    {
-      id: 2,
-      url: "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600&q=80"
-    },
-    {
-      id: 3,
-      url: "https://images.unsplash.com/photo-1625650004620-67c4a5c66e4e?w=600&q=80"
-    },
-    {
-      id: 4,
-      url: "https://images.unsplash.com/photo-1595453348098-104a807f84f8?w=600&q=80"
-    },
-    {
-      id: 5,
-      url: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=600&q=80"
-    }
-  ]
-};
+import Pagination from '@/components/ui/pagination';
 
 const AuctionDetail = () => {
   const navigate = useNavigate();
@@ -87,19 +28,34 @@ const AuctionDetail = () => {
     leaveSocket,
     placeBid,
     fetchAuctionDetail,
+    fetchBidHistory,
     startPrice,
     buyNowPrice,
     startTime,
     endTime,
     status,
     myMaxBid,
+    product,
+    bidHistoryPage,
+    bidHistoryTotalPages,
+    bidHistoryTotalElements,
+    isLoadingBidHistory
   } = useAuctionStore();
-
-  // Sử dụng mock product nếu store product chưa có
-  const product = MOCK_PRODUCT;
 
   const [bidAmount, setBidAmount] = useState<number>(0);
   const isLeading = highestBidder === currentUser?.username;
+  const [showBidIncrementInfo, setShowBidIncrementInfo] = useState(false);
+
+  // Parse attributes JSON nếu có
+  const parseAttributes = (attributesStr: string | undefined) => {
+    if (!attributesStr) return null;
+    try {
+      return JSON.parse(attributesStr);
+    } catch {
+      // Nếu không phải JSON, trả về string gốc
+      return attributesStr;
+    }
+  };
 
   // Khởi tạo dữ liệu và Socket
   useEffect(() => {
@@ -144,7 +100,13 @@ const AuctionDetail = () => {
     return currentPrice > 0 ? currentPrice + 100000 : startPrice + 100000;
   };
 
-  // Lấy danh sách ảnh sản phẩm - sử dụng mock nếu không có từ store
+  const handleBidHistoryPageChange = (page: number) => {
+    if (sessionId) {
+      fetchBidHistory(sessionId, page);
+    }
+  };
+
+  // Lấy danh sách ảnh sản phẩm
   const productImages = product?.images || [];
 
   return (
@@ -395,33 +357,169 @@ const AuctionDetail = () => {
             <div className="p-6">
               {/* Item Info Tab */}
               {activeTab === 'info' && (
-                <div>
-                  <h3 className="font-bold text-lg mb-4">Mô tả sản phẩm</h3>
-                  <div className="prose max-w-none">
-                    <p className="text-gray-700 whitespace-pre-wrap">
-                      {product?.description || 'Chưa có mô tả chi tiết.'}
-                    </p>
-                  </div>
+                <div className="grid lg:grid-cols-3 gap-6">
+                  {/* LEFT: Item Details Card */}
+                  <div className="lg:col-span-1">
+                    <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                      <div className="bg-purple-600 text-white px-4 py-3">
+                        <h3 className="font-bold text-base">Thông tin đấu giá</h3>
+                      </div>
+                      <div className="p-4 space-y-3 text-sm">
+                        {/* Item ID */}
+                        <div className="flex justify-between items-start border-b border-gray-200 pb-2">
+                          <span className="font-semibold text-gray-700">ID Phiên:</span>
+                          <span className="text-gray-900 font-mono">{sessionId}</span>
+                        </div>
 
-                  {/* Product Attributes */}
-                  {product?.attributes && (
-                    <div className="mt-6 border-t pt-6">
-                      <h4 className="font-semibold mb-3">Thông số kỹ thuật:</h4>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm text-gray-700">{product.attributes}</p>
+                        {/* Number of Bids */}
+                        <div className="flex justify-between items-start border-b border-gray-200 pb-2">
+                          <span className="font-semibold text-gray-700">Số lượt đấu:</span>
+                          <div className="text-right">
+                            <span className="text-gray-900 font-bold">{bidHistoryTotalElements}</span>
+                            {highestBidder && highestBidder !== 'Chưa có' && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Cao nhất: {highestBidder.charAt(0)}****{highestBidder.slice(-1)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bid Increment */}
+                        <div className="flex justify-between items-start border-b border-gray-200 pb-2">
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold text-gray-700">Bước giá:</span>
+                            <button
+                              onClick={() => setShowBidIncrementInfo(true)}
+                              className="text-gray-400 hover:text-purple-600 transition-colors"
+                              title="Xem cách tính bước giá"
+                            >
+                              <HelpCircle size={16} />
+                            </button>
+                          </div>
+                          <span className="text-gray-900 font-semibold">
+                            {formatCurrency((() => {
+                              const price = currentPrice;
+                              if (price < 50000) return 5000;
+                              if (price < 200000) return 10000;
+                              if (price < 500000) return 20000;
+                              if (price < 1000000) return 50000;
+                              if (price < 5000000) return 100000;
+                              if (price < 10000000) return 200000;
+                              if (price < 50000000) return 500000;
+                              return 1000000;
+                            })())} ₫
+                          </span>
+                        </div>
+
+                        {/* Shipping Info */}
+                        <div className="flex justify-between items-start border-b border-gray-200 pb-2">
+                          <span className="font-semibold text-gray-700">Vận chuyển:</span>
+                          <span className="text-blue-600 hover:underline cursor-pointer text-sm">
+                            Xem chi tiết
+                          </span>
+                        </div>
+
+                        {/* Ends On */}
+                        <div className="flex justify-between items-start border-b border-gray-200 pb-2">
+                          <span className="font-semibold text-gray-700">Kết thúc:</span>
+                          <div className="text-right">
+                            <p className="text-gray-900 font-medium">{formatJavaDate(endTime)}</p>
+                            <div className="text-red-600 font-bold text-xs mt-1">
+                              {status === 'SCHEDULED' ? (
+                                <span className="text-blue-600">Chưa bắt đầu</span>
+                              ) : endTime ? (
+                                <CountdownTimer targetDate={endTime} />
+                              ) : (
+                                '--:--:--'
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Seller */}
+                        <div className="flex justify-between items-start">
+                          <span className="font-semibold text-gray-700">Người bán:</span>
+                          <button
+                            onClick={() => setActiveTab('seller')}
+                            className="text-blue-600 hover:underline text-right font-medium"
+                          >
+                            {product?.seller?.username || 'N/A'}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  )}
+                  </div>
 
-                  {/* Category */}
-                  <div className="mt-6 border-t pt-6">
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-gray-600">Danh mục:</span>
-                      <span className="font-semibold">{product?.category?.name}</span>
+                  {/* RIGHT: Description & Attributes */}
+                  <div className="lg:col-span-2">
+                    {/* Product Title & Description */}
+                    <div className="mb-6">
+                      <h3 className="font-bold text-xl text-gray-900 mb-3">{product?.name}</h3>
+                      <div className="prose max-w-none">
+                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                          {product?.description || 'Chưa có mô tả chi tiết.'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-gray-600">ID sản phẩm:</span>
-                      <span className="font-semibold">#{product?.id}</span>
+
+                    {/* Product Attributes */}
+                    {product?.attributes && (
+                      <div className="mb-6">
+                        <h4 className="font-semibold text-base mb-3 text-gray-800">Thông số kỹ thuật:</h4>
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          {(() => {
+                            const attrs = parseAttributes(product.attributes);
+
+                            // Nếu là object JSON, hiển thị dạng key-value
+                            if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+                              return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {Object.entries(attrs).map(([key, value]) => (
+                                    <div key={key} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                                      <span className="text-sm text-gray-600 capitalize">{key}:</span>
+                                      <span className="text-sm font-semibold text-gray-800">{String(value)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+
+                            // Nếu là string hoặc format khác, hiển thị như cũ
+                            return <p className="text-sm text-gray-700">{product.attributes}</p>;
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Category & ID */}
+                    <div className="bg-white rounded-lg border border-gray-200 p-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Danh mục:</span>
+                          <span className="font-semibold text-gray-900">{product?.category?.name}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">ID Sản phẩm:</span>
+                          <span className="font-semibold text-gray-900">#{product?.id}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Ngày tạo:</span>
+                          <span className="text-gray-900">{formatJavaDate(product?.createdAt)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Trạng thái:</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                            status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' :
+                              status === 'ENDED' ? 'bg-gray-100 text-gray-700' :
+                                'bg-yellow-100 text-yellow-700'
+                            }`}>
+                            {status === 'ACTIVE' ? 'Đang diễn ra' :
+                              status === 'SCHEDULED' ? 'Sắp diễn ra' :
+                                status === 'ENDED' ? 'Đã kết thúc' :
+                                  status}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -476,54 +574,74 @@ const AuctionDetail = () => {
                     </div>
                   )}
 
-                  {recentBids.length === 0 ? (
+                  {isLoadingBidHistory ? (
+                    <div className="text-center py-12">
+                      <Loader2 className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
+                      <p className="text-gray-600">Đang tải...</p>
+                    </div>
+                  ) : recentBids.length === 0 ? (
                     <div className="text-center py-12">
                       <p className="text-gray-500">Chưa có lượt đấu giá nào. Hãy là người đầu tiên!</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Người đấu giá</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Số tiền</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Thời gian</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {recentBids.map((bid, index) => {
-                            const isMe = currentUser?.username === bid.user.username;
-                            const isLeader = index === 0;
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Người đấu giá</th>
+                              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Số tiền</th>
+                              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Thời gian</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {recentBids.map((bid, index) => {
+                              const isMe = currentUser?.username === bid.user.username;
+                              const isLeader = index === 0;
 
-                            return (
-                              <tr key={bid.id} className={isLeader ? 'bg-green-50' : ''}>
-                                <td className="px-4 py-3 text-sm">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">
-                                      {bid.user.username.charAt(0)}****{bid.user.username.slice(-1)}
+                              return (
+                                <tr key={bid.id} className={isLeader ? 'bg-green-50' : ''}>
+                                  <td className="px-4 py-3 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">
+                                        {bid.user.username.charAt(0)}****{bid.user.username.slice(-1)}
+                                      </span>
+                                      {isMe && (
+                                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Bạn</span>
+                                      )}
+                                      {isLeader && (
+                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Dẫn đầu</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-right">
+                                    <span className={isLeader ? 'font-bold text-green-600' : 'text-gray-600'}>
+                                      {formatCurrency(bid.displayedAmount)} ₫
                                     </span>
-                                    {isMe && (
-                                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Bạn</span>
-                                    )}
-                                    {isLeader && (
-                                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Dẫn đầu</span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-right">
-                                  <span className={isLeader ? 'font-bold text-green-600' : 'text-gray-600'}>
-                                    {formatCurrency(bid.displayedAmount)} ₫
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-right text-gray-600">
-                                  {formatJavaDate(bid.bidTime)}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-right text-gray-600">
+                                    {formatJavaDate(bid.bidTime)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination */}
+                      {bidHistoryTotalPages > 1 && (
+                        <div className="mt-6">
+                          <Pagination
+                            currentPage={bidHistoryPage}
+                            totalPages={bidHistoryTotalPages}
+                            onPageChange={handleBidHistoryPageChange}
+                            itemsPerPage={2}
+                            totalItems={bidHistoryTotalElements}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -531,6 +649,109 @@ const AuctionDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Bid Increment Info Modal */}
+      {showBidIncrementInfo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowBidIncrementInfo(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <HelpCircle className="text-purple-600" size={28} />
+                Cách tính Bước giá
+              </h2>
+              <button
+                onClick={() => setShowBidIncrementInfo(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={24} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-700 mb-4">
+                Bước giá được hệ thống tự động tính dựa trên giá hiện tại của phiên đấu giá để đảm bảo tính cạnh tranh hợp lý:
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-purple-600 text-white">
+                    <th className="px-4 py-3 text-left font-semibold">Giá hiện tại</th>
+                    <th className="px-4 py-3 text-right font-semibold">Bước giá</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-700">Dưới 50,000₫</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">5,000₫</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-700">Từ 50,000₫ - 199,999₫</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">10,000₫</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-700">Từ 200,000₫ - 499,999₫</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">20,000₫</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-700">Từ 500,000₫ - 999,999₫</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">50,000₫</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-700">Từ 1,000,000₫ - 4,999,999₫</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">100,000₫</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-700">Từ 5,000,000₫ - 9,999,999₫</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">200,000₫</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-700">Từ 10,000,000₫ - 49,999,999₫</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">500,000₫</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-700">Từ 50,000,000₫ trở lên</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">1,000,000₫</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <p className="text-sm text-purple-800">
+                <strong>💡 Lưu ý:</strong> Bước giá hiện tại của phiên này là <strong>{formatCurrency((() => {
+                  const price = currentPrice;
+                  if (price < 50000) return 5000;
+                  if (price < 200000) return 10000;
+                  if (price < 500000) return 20000;
+                  if (price < 1000000) return 50000;
+                  if (price < 5000000) return 100000;
+                  if (price < 10000000) return 200000;
+                  if (price < 50000000) return 500000;
+                  return 1000000;
+                })())}₫</strong> (dựa trên giá hiện tại <strong>{formatCurrency(currentPrice)}₫</strong>).
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowBidIncrementInfo(false)}
+                className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   );
 };
