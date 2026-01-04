@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TrendingUp, ShoppingCart, Clock, CheckCircle, AlertCircle, Star, Loader2, DollarSign } from 'lucide-react';
+import { Package, TrendingUp, ShoppingCart, Clock, CheckCircle, AlertCircle, Star, Loader2, DollarSign, X, FileText } from 'lucide-react';
 import PageLayout from './page-layout';
 import ShippingTrackingModal from '../pop-up/shipping-tracking-modal';
 import OrderDetailModal from '../pop-up/order-detail-modal';
@@ -8,8 +8,10 @@ import Pagination from '@/components/ui/pagination';
 import { toast } from 'sonner';
 import { auctionService } from '@/services/auctionService';
 import { invoiceService, type SellerRevenueResponse } from '@/services/invoiceService';
+import { feedbackService } from '@/services/feedbackService';
 import type { AuctionSessionResponse, AuctionStatus } from '@/types/auction';
-import type { InvoiceResponse, InvoiceStatus } from '@/types/invoice';
+import type { InvoiceResponse, InvoiceStatus, DisputeResponse } from '@/types/invoice';
+import type { FeedbackRating } from '@/types/feedback';
 
 type TabType = 'auctions' | 'orders' | 'stats';
 type OrderSubTab = 'sales' | 'fees'; // Sub-tabs for Orders
@@ -24,6 +26,16 @@ const SellerDashboard = () => {
   const [showShippingModal, setShowShippingModal] = useState(false);
   const [showOrderDetailModal, setShowOrderDetailModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<InvoiceResponse | null>(null);
+
+  // Feedback Modal State
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [selectedInvoiceForFeedback, setSelectedInvoiceForFeedback] = useState<InvoiceResponse | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState<FeedbackRating | ''>('');
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  // Dispute details map (invoiceId -> DisputeResponse)
+  const [disputeDetailsMap, setDisputeDetailsMap] = useState<Map<number, DisputeResponse>>(new Map());
 
   // API State - Auctions
   const [auctions, setAuctions] = useState<AuctionSessionResponse[]>([]);
@@ -121,6 +133,23 @@ const SellerDashboard = () => {
       setSales(response.data.data);
       setSalesTotalPages(response.data.totalPages);
       setSalesTotalElements(response.data.totalElements);
+
+      // Fetch dispute details for DISPUTE invoices
+      const disputeInvoices = response.data.data.filter(inv => inv.status === 'DISPUTE');
+      if (disputeInvoices.length > 0) {
+        const detailsMap = new Map<number, DisputeResponse>();
+        await Promise.all(
+          disputeInvoices.map(async (invoice) => {
+            try {
+              const disputeRes = await invoiceService.getDisputeByInvoice(invoice.id);
+              detailsMap.set(invoice.id, disputeRes.data);
+            } catch (error) {
+              console.error(`Error fetching dispute for invoice ${invoice.id}:`, error);
+            }
+          })
+        );
+        setDisputeDetailsMap(detailsMap);
+      }
     } catch (error: any) {
       console.error('Error fetching sales:', error);
       toast.error('Không thể tải danh sách đơn bán hàng');
@@ -258,6 +287,81 @@ const SellerDashboard = () => {
   const handleOpenOrderDetail = (order: InvoiceResponse) => {
     setSelectedOrder(order);
     setShowOrderDetailModal(true);
+  };
+
+  // Check if invoice is overdue (past dueDate)
+  const isOverdue = (invoice: InvoiceResponse) => {
+    if (!invoice.dueDate) return false;
+    return new Date(invoice.dueDate) < new Date();
+  };
+
+  // Handle feedback for buyer
+  const handleOpenFeedback = (invoice: InvoiceResponse) => {
+    setSelectedInvoiceForFeedback(invoice);
+    setFeedbackRating('');
+    setFeedbackComment('');
+    setShowFeedbackModal(true);
+  };
+
+  const handleCreateFeedback = async () => {
+    if (!selectedInvoiceForFeedback || !feedbackRating) {
+      toast.error('Vui lòng chọn đánh giá');
+      return;
+    }
+
+    try {
+      setIsSubmittingFeedback(true);
+      await feedbackService.createFeedback(selectedInvoiceForFeedback.id, {
+        rating: feedbackRating as FeedbackRating,
+        comment: feedbackComment || undefined
+      });
+      toast.success('Đã gửi đánh giá thành công!', {
+        description: 'Cảm ơn bạn đã đánh giá người mua.'
+      });
+      setShowFeedbackModal(false);
+      setSelectedInvoiceForFeedback(null);
+      setFeedbackRating('');
+      setFeedbackComment('');
+      // Refresh sales list
+      fetchSales();
+    } catch (error: any) {
+      console.error('Error creating feedback:', error);
+      toast.error(error.response?.data?.message || 'Không thể gửi đánh giá');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  // Fetch dispute details for all DISPUTE invoices
+  const fetchDisputeDetails = async (invoices: InvoiceResponse[]) => {
+    const disputeInvoices = invoices.filter(inv => inv.status === 'DISPUTE');
+    const detailsMap = new Map<number, DisputeResponse>();
+
+    await Promise.all(
+      disputeInvoices.map(async (invoice) => {
+        try {
+          const response = await invoiceService.getDisputeByInvoice(invoice.id);
+          detailsMap.set(invoice.id, response.data);
+        } catch (error) {
+          console.error(`Error fetching dispute for invoice ${invoice.id}:`, error);
+        }
+      })
+    );
+
+    setDisputeDetailsMap(detailsMap);
+  };
+
+  const handleReportNonPayment = async (invoice: InvoiceResponse) => {
+    if (!confirm(`Báo cáo người mua bùng hàng cho đơn #${invoice.id}?\nNgười mua sẽ nhận strike và đơn hàng sẽ bị hủy.`)) return;
+
+    try {
+      await invoiceService.reportNonPayment(invoice.id);
+      toast.success('Đã báo cáo bùng hàng thành công!');
+      fetchSales();
+    } catch (error: any) {
+      console.error('Error reporting non-payment:', error);
+      toast.error(error.response?.data?.message || 'Không thể báo cáo');
+    }
   };
 
   return (
@@ -686,8 +790,90 @@ const SellerDashboard = () => {
                                       )}
                                     </div>
 
+                                    {/* Dispute Details Section */}
+                                    {sale.status === 'DISPUTE' && disputeDetailsMap.get(sale.id) && (
+                                      <div className="mt-4 border-t-2 border-red-200 pt-4">
+                                        {(() => {
+                                          const dispute = disputeDetailsMap.get(sale.id);
+                                          if (!dispute) return null;
+
+                                          return (
+                                            <div className="space-y-3">
+                                              {/* Header */}
+                                              <div className="flex items-center justify-between mb-3">
+                                                <h4 className="text-lg font-bold text-red-700 flex items-center gap-2">
+                                                  <AlertCircle size={20} />
+                                                  Thông tin khiếu nại từ Buyer
+                                                </h4>
+                                                {dispute.resolvedAt ? (
+                                                  <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                                    ✅ Đã xử lý
+                                                  </span>
+                                                ) : (
+                                                  <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
+                                                    ⏳ Đang xử lý
+                                                  </span>
+                                                )}
+                                              </div>
+
+                                              {/* Dispute Info */}
+                                              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                                <p className="text-xs text-gray-600 mb-1">
+                                                  Mã khiếu nại: #{dispute.id} | Ngày tạo: {new Date(dispute.createdAt).toLocaleString('vi-VN')}
+                                                </p>
+                                              </div>
+
+                                              {/* Buyer's Complaint */}
+                                              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                                                <div className="flex items-start gap-2 mb-2">
+                                                  <FileText className="text-red-600 mt-1" size={18} />
+                                                  <h5 className="text-sm font-bold text-gray-800">Lời khai của Buyer:</h5>
+                                                </div>
+                                                <div className="bg-white rounded-lg p-3 border border-red-200">
+                                                  <p className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
+                                                    {dispute.reason}
+                                                  </p>
+                                                </div>
+                                              </div>
+
+                                              {/* Admin Response */}
+                                              {dispute.adminNote ? (
+                                                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                                                  <div className="flex items-start gap-2 mb-2">
+                                                    <CheckCircle className="text-blue-600 mt-1" size={18} />
+                                                    <div className="flex-1">
+                                                      <h5 className="text-sm font-bold text-gray-800">Kết luận từ Admin:</h5>
+                                                      {dispute.resolvedAt && (
+                                                        <p className="text-xs text-green-600">
+                                                          Xử lý vào: {new Date(dispute.resolvedAt).toLocaleString('vi-VN')}
+                                                        </p>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                  <div className="bg-white rounded-lg p-3 border border-blue-200">
+                                                    <p className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">
+                                                      {dispute.adminNote}
+                                                    </p>
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                                  <div className="flex items-center gap-2">
+                                                    <Clock className="text-yellow-600" size={18} />
+                                                    <p className="text-sm text-yellow-800">
+                                                      ⏳ Khiếu nại đang được Admin xem xét. Vui lòng chờ kết quả xử lý.
+                                                    </p>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })()}
+                                      </div>
+                                    )}
+
                                     {/* Actions */}
-                                    <div className="flex gap-3 flex-wrap">
+                                    <div className="flex gap-3 flex-wrap mt-4">
                                       {sale.status === 'PAID' && (
                                         <button
                                           onClick={() => handleOpenShippingModal(sale)}
@@ -696,17 +882,36 @@ const SellerDashboard = () => {
                                           ✍️ Nhập mã vận đơn
                                         </button>
                                       )}
-                                      {sale.status === 'DISPUTE' && (
-                                        <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-2 rounded-lg">
+                                      {sale.status === 'PENDING' && isOverdue(sale) && (
+                                        <button
+                                          onClick={() => handleReportNonPayment(sale)}
+                                          className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold flex items-center gap-2"
+                                        >
                                           <AlertCircle className="w-5 h-5" />
-                                          <span className="font-semibold">Đang tranh chấp - Cần xử lý</span>
-                                        </div>
+                                          Báo cáo bùng hàng
+                                        </button>
                                       )}
                                       {sale.status === 'COMPLETED' && (
                                         <div className="flex items-center gap-2 text-green-600">
                                           <CheckCircle className="w-5 h-5" />
                                           <span className="font-semibold">Đã hoàn thành</span>
                                         </div>
+                                      )}
+                                      {sale.status === 'COMPLETED' && (
+                                        sale.hasFeedback ? (
+                                          <div className="px-6 py-2 bg-gray-100 text-gray-500 rounded-lg font-semibold flex items-center gap-2 cursor-not-allowed">
+                                            <CheckCircle className="w-5 h-5" />
+                                            Đã đánh giá
+                                          </div>
+                                        ) : (
+                                          <button
+                                            onClick={() => handleOpenFeedback(sale)}
+                                            className="px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-semibold flex items-center gap-2"
+                                          >
+                                            <Star className="w-4 h-4" />
+                                            Đánh giá người mua
+                                          </button>
+                                        )
                                       )}
                                       <button
                                         onClick={() => handleOpenOrderDetail(sale)}
@@ -971,6 +1176,101 @@ const SellerDashboard = () => {
             order={selectedOrder}
           />
         </>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && selectedInvoiceForFeedback && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <Star className="text-yellow-500" size={24} />
+                Đánh giá người mua
+              </h2>
+              <button
+                onClick={() => setShowFeedbackModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-gray-600 mb-1">Đơn hàng: #{selectedInvoiceForFeedback.id}</p>
+              <p className="text-sm text-gray-600">Sản phẩm: {selectedInvoiceForFeedback.product.name}</p>
+              <p className="text-sm font-bold text-gray-800 mt-1">
+                Người mua: {selectedInvoiceForFeedback.user.firstName} {selectedInvoiceForFeedback.user.lastName}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Đánh giá <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setFeedbackRating('POSITIVE')}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${feedbackRating === 'POSITIVE'
+                    ? 'border-green-500 bg-green-50 text-green-700'
+                    : 'border-gray-200 hover:border-green-300'
+                    }`}
+                >
+                  <div className="text-2xl mb-1">👍</div>
+                  <div className="text-sm font-semibold">Tích cực</div>
+                </button>
+                <button
+                  onClick={() => setFeedbackRating('NEUTRAL')}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${feedbackRating === 'NEUTRAL'
+                    ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                    : 'border-gray-200 hover:border-yellow-300'
+                    }`}
+                >
+                  <div className="text-2xl mb-1">😐</div>
+                  <div className="text-sm font-semibold">Trung lập</div>
+                </button>
+                <button
+                  onClick={() => setFeedbackRating('NEGATIVE')}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${feedbackRating === 'NEGATIVE'
+                    ? 'border-red-500 bg-red-50 text-red-700'
+                    : 'border-gray-200 hover:border-red-300'
+                    }`}
+                >
+                  <div className="text-2xl mb-1">👎</div>
+                  <div className="text-sm font-semibold">Tiêu cực</div>
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nhận xét (không bắt buộc)
+              </label>
+              <textarea
+                value={feedbackComment}
+                onChange={(e) => setFeedbackComment(e.target.value)}
+                placeholder="Chia sẻ trải nghiệm của bạn với người mua..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowFeedbackModal(false)}
+                className="flex-1 px-6 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleCreateFeedback}
+                disabled={isSubmittingFeedback || !feedbackRating}
+                className="flex-1 px-6 py-2.5 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+              >
+                {isSubmittingFeedback ? 'Đang gửi...' : 'Gửi đánh giá'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </PageLayout>
   );

@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Header from './header';
 import Footer from './footer';
-import Invoice from './invoice';
 import { auctionService } from '@/services/auctionService';
 import { invoiceService } from '@/services/invoiceService';
 import { paymentService } from '@/services/paymentService';
 import { addressService, type AddressResponse, type AddressRequest } from '@/services/addressService';
 import { userService } from '@/services/userService';
+import { feedbackService } from '@/services/feedbackService';
 import { useAuthStore } from '@/stores/useAuthStore';
-import type { InvoiceResponse } from '@/types/invoice';
+import type { InvoiceResponse, DisputeResponse } from '@/types/invoice';
 import type { AuctionSessionResponse } from '@/types/auction';
 import type { UserProfileResponse } from '@/types/user';
 import type { FeedbackRequest, FeedbackRating } from '@/types/feedback';
@@ -35,7 +35,6 @@ import {
   Copy,
   ExternalLink
 } from 'lucide-react';
-import { feedbackService } from '@/services/feedbackService';
 
 // Types for Orders tab
 type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED_NON_PAYMENT' | 'CANCELLED_BY_SELLER' | 'DISPUTE' | 'REFUNDED';
@@ -104,9 +103,14 @@ const UserDetail = () => {
   const ordersPageSize = 5;
   const [orderStatusTab, setOrderStatusTab] = useState<OrderStatus>('SHIPPING');
 
-  // Invoice detail modal
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  // Disputes state
+  const [disputeInvoices, setDisputeInvoices] = useState<InvoiceResponse[]>([]);
+  const [disputeDetailsMap, setDisputeDetailsMap] = useState<Map<number, DisputeResponse>>(new Map());
+  const [isLoadingDisputes, setIsLoadingDisputes] = useState(false);
+  const [disputesPage, setDisputesPage] = useState(1);
+  const [disputesTotalPages, setDisputesTotalPages] = useState(1);
+  const [disputesTotalElements, setDisputesTotalElements] = useState(0);
+  const disputesPageSize = 2;
 
   // Feedback modal states
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -114,6 +118,21 @@ const UserDetail = () => {
   const [feedbackRating, setFeedbackRating] = useState<FeedbackRating>('POSITIVE');
   const [feedbackComment, setFeedbackComment] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  // Dispute modal states
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [selectedInvoiceForDispute, setSelectedInvoiceForDispute] = useState<InvoiceResponse | null>(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
+
+  // Dispute detail viewing state
+  const [showDisputeDetailModal, setShowDisputeDetailModal] = useState(false);
+  const [disputeDetail, setDisputeDetail] = useState<DisputeResponse | null>(null);
+  const [isLoadingDispute, setIsLoadingDispute] = useState(false);
+
+  // Confirm dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedInvoiceForConfirm, setSelectedInvoiceForConfirm] = useState<InvoiceResponse | null>(null);
 
   const [copiedCode, setCopiedCode] = useState('');
 
@@ -180,6 +199,13 @@ const UserDetail = () => {
       fetchOrders();
     }
   }, [activeTab, activeSubTab, orderStatusTab, ordersPage]);
+
+  // Fetch disputes when viewing 'disputes' subtab
+  useEffect(() => {
+    if (activeTab === 'buying' && activeSubTab === 'disputes') {
+      fetchDisputes();
+    }
+  }, [activeTab, activeSubTab, disputesPage]);
 
   const fetchActiveAuctions = async () => {
     try {
@@ -272,6 +298,44 @@ const UserDetail = () => {
     }
   };
 
+  const fetchDisputes = async () => {
+    try {
+      setIsLoadingDisputes(true);
+
+      // Step 1: Fetch invoices with DISPUTE status
+      const response = await invoiceService.getMyInvoices({
+        page: disputesPage,
+        size: disputesPageSize,
+        status: 'DISPUTE',
+        type: 'AUCTION_SALE'
+      });
+
+      const invoices = response.data.data;
+      setDisputeInvoices(invoices);
+      setDisputesTotalPages(response.data.totalPages);
+      setDisputesTotalElements(response.data.totalElements);
+
+      // Step 2: Fetch dispute details for each invoice
+      const detailsMap = new Map<number, DisputeResponse>();
+      await Promise.all(
+        invoices.map(async (invoice) => {
+          try {
+            const disputeRes = await invoiceService.getDisputeByInvoice(invoice.id);
+            detailsMap.set(invoice.id, disputeRes.data);
+          } catch (error) {
+            console.error(`Error fetching dispute for invoice ${invoice.id}:`, error);
+          }
+        })
+      );
+      setDisputeDetailsMap(detailsMap);
+    } catch (error: any) {
+      console.error('Error fetching disputes:', error);
+      toast.error('Không thể tải danh sách khiếu nại');
+    } finally {
+      setIsLoadingDisputes(false);
+    }
+  };
+
   const handleCreateFeedback = async () => {
     if (!selectedInvoiceForFeedback) return;
 
@@ -296,6 +360,75 @@ const UserDetail = () => {
       toast.error(error.response?.data?.message || 'Không thể gửi đánh giá');
     } finally {
       setIsSubmittingFeedback(false);
+    }
+  };
+
+  const handleConfirmReceived = (invoice: InvoiceResponse) => {
+    setSelectedInvoiceForConfirm(invoice);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (!selectedInvoiceForConfirm) return;
+
+    try {
+      await invoiceService.confirmInvoice(selectedInvoiceForConfirm.id);
+      toast.success('Đã xác nhận nhận hàng thành công!');
+      setShowConfirmDialog(false);
+      setSelectedInvoiceForConfirm(null);
+      // Refresh orders
+      fetchOrders();
+    } catch (error: any) {
+      console.error('Error confirming invoice:', error);
+      toast.error(error.response?.data?.message || 'Không thể xác nhận đơn hàng');
+    }
+  };
+
+  const handleOpenDispute = (invoice: InvoiceResponse) => {
+    setSelectedInvoiceForDispute(invoice);
+    setDisputeReason('');
+    setShowDisputeModal(true);
+  };
+
+  const handleSubmitDispute = async () => {
+    if (!selectedInvoiceForDispute) return;
+
+    if (!disputeReason.trim()) {
+      toast.error('Vui lòng nhập lý do khiếu nại');
+      return;
+    }
+
+    try {
+      setIsSubmittingDispute(true);
+      await invoiceService.reportDispute(selectedInvoiceForDispute.id, {
+        reason: disputeReason
+      });
+      toast.success('Đã gửi khiếu nại thành công! Chúng tôi sẽ xem xét trong thời gian sớm nhất.');
+      setShowDisputeModal(false);
+      setDisputeReason('');
+      setSelectedInvoiceForDispute(null);
+      // Refresh orders
+      fetchOrders();
+    } catch (error: any) {
+      console.error('Error submitting dispute:', error);
+      toast.error(error.response?.data?.message || 'Không thể gửi khiếu nại');
+    } finally {
+      setIsSubmittingDispute(false);
+    }
+  };
+
+  const handleViewDispute = async (invoice: InvoiceResponse) => {
+    try {
+      setIsLoadingDispute(true);
+      setShowDisputeDetailModal(true);
+      const response = await invoiceService.getDisputeByInvoice(invoice.id);
+      setDisputeDetail(response.data);
+    } catch (error: any) {
+      console.error('Error fetching dispute:', error);
+      toast.error('Không thể tải thông tin khiếu nại');
+      setShowDisputeDetailModal(false);
+    } finally {
+      setIsLoadingDispute(false);
     }
   };
 
@@ -751,6 +884,18 @@ const UserDetail = () => {
                           }`}
                       >
                         Đơn mua ({ordersTotalElements})
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveSubTab('disputes');
+
+                        }}
+                        className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${activeSubTab === 'disputes'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                      >
+                        Khiếu nại
                       </button>
                     </div>
 
@@ -1253,17 +1398,58 @@ const UserDetail = () => {
                                             Xem hóa đơn
                                           </button>
 
-                                          {invoice.status === 'COMPLETED' && (
+                                          {/* Confirm Received Button (only for SHIPPING status) */}
+                                          {invoice.status === 'SHIPPING' && (
                                             <button
-                                              onClick={() => {
-                                                setSelectedInvoiceForFeedback(invoice);
-                                                setShowFeedbackModal(true);
-                                              }}
-                                              className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                                              onClick={() => handleConfirmReceived(invoice)}
+                                              className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
                                             >
-                                              <Star size={18} />
-                                              Đánh giá
+                                              <CheckCircle size={18} />
+                                              Đã nhận hàng
                                             </button>
+                                          )}
+
+                                          {/* Dispute Button (only for SHIPPING status) */}
+                                          {invoice.status === 'SHIPPING' && (
+                                            <button
+                                              onClick={() => handleOpenDispute(invoice)}
+                                              className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                                            >
+                                              <AlertCircle size={18} />
+                                              Khiếu nại
+                                            </button>
+                                          )}
+
+                                          {/* View Dispute Button (only for DISPUTE status) */}
+                                          {invoice.status === 'DISPUTE' && (
+                                            <button
+                                              onClick={() => handleViewDispute(invoice)}
+                                              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                                            >
+                                              <AlertCircle size={18} />
+                                              Xem chi tiết khiếu nại
+                                            </button>
+                                          )}
+
+                                          {/* Feedback Button (only for COMPLETED status) */}
+                                          {invoice.status === 'COMPLETED' && (
+                                            invoice.hasFeedback ? (
+                                              <div className="flex-1 bg-gray-100 text-gray-500 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 cursor-not-allowed">
+                                                <CheckCircle size={18} />
+                                                Đã đánh giá
+                                              </div>
+                                            ) : (
+                                              <button
+                                                onClick={() => {
+                                                  setSelectedInvoiceForFeedback(invoice);
+                                                  setShowFeedbackModal(true);
+                                                }}
+                                                className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                                              >
+                                                <Star size={18} />
+                                                Đánh giá
+                                              </button>
+                                            )
                                           )}
                                         </div>
                                       </div>
@@ -1286,6 +1472,244 @@ const UserDetail = () => {
                           );
                         })()}
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Disputes Tab */}
+                {activeTab === 'buying' && activeSubTab === 'disputes' && (
+                  <div>
+                    {isLoadingDisputes ? (
+                      <div className="text-center py-12">
+                        <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto mb-4" />
+                        <p className="text-gray-600">Đang tải khiếu nại...</p>
+                      </div>
+                    ) : disputeInvoices.length === 0 ? (
+                      <div className="text-center py-16 bg-gray-50 rounded-xl">
+                        <AlertCircle size={64} className="mx-auto text-gray-300 mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                          Không có khiếu nại nào
+                        </h3>
+                        <p className="text-gray-500">
+                          Bạn chưa có khiếu nại nào cho các đơn hàng
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-4 mb-6">
+                          {disputeInvoices.map((invoice) => {
+                            const dispute = disputeDetailsMap.get(invoice.id);
+                            const productImage = invoice.product.images?.[0]?.url || 'https://via.placeholder.com/300';
+
+                            return (
+                              <div
+                                key={invoice.id}
+                                className="bg-white border-2 border-red-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
+                              >
+                                {/* Header with status */}
+                                <div className="bg-gradient-to-r from-red-50 to-orange-50 px-6 py-4 border-b border-red-200">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <AlertCircle className="text-red-600" size={28} />
+                                      <div>
+                                        <h3 className="text-lg font-bold text-gray-800">
+                                          Khiếu nại đơn hàng #{invoice.id}
+                                        </h3>
+                                        <p className="text-sm text-gray-600">
+                                          Ngày tạo: {new Date(invoice.createdAt).toLocaleString('vi-VN')}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    {dispute?.resolvedAt ? (
+                                      <span className="px-4 py-2 bg-green-100 text-green-700 text-sm font-semibold rounded-full flex items-center gap-2">
+                                        <CheckCircle size={18} />
+                                        Đã xử lý
+                                      </span>
+                                    ) : (
+                                      <span className="px-4 py-2 bg-yellow-100 text-yellow-700 text-sm font-semibold rounded-full flex items-center gap-2">
+                                        <Clock size={18} />
+                                        Đang xử lý
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="p-6">
+                                  {/* Product Information */}
+                                  <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                      <Package size={18} />
+                                      Thông tin sản phẩm
+                                    </h4>
+                                    <div className="flex gap-4">
+                                      <img
+                                        src={productImage}
+                                        alt={invoice.product.name}
+                                        className="w-24 h-24 object-cover rounded-lg border-2 border-white shadow-sm"
+                                      />
+                                      <div className="flex-1">
+                                        <h5 className="font-bold text-gray-800 mb-2">{invoice.product.name}</h5>
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                          <div>
+                                            <p className="text-gray-600">Người bán</p>
+                                            <p className="font-semibold text-gray-800">
+                                              {invoice.product.seller.firstName} {invoice.product.seller.lastName}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className="text-gray-600">Số điện thoại</p>
+                                            <p className="font-semibold text-gray-800">
+                                              {invoice.product.seller.phoneNumber}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className="text-gray-600">Email người bán</p>
+                                            <p className="font-semibold text-gray-800">{invoice.product.seller.email}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-gray-600">Giá mua</p>
+                                            <p className="font-bold text-indigo-600 text-lg">
+                                              {formatCurrency(invoice.finalPrice)}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className="text-gray-600">Trạng thái</p>
+                                            <span className="inline-block px-3 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+                                              Khiếu nại
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Shipping Information */}
+                                  {invoice.trackingCode && (
+                                    <div className="bg-blue-50 rounded-xl p-4 mb-6">
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                        <Truck size={18} />
+                                        Thông tin vận chuyển
+                                      </h4>
+                                      <div className="grid grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                          <p className="text-gray-600">Mã vận đơn</p>
+                                          <p className="font-semibold text-gray-800">{invoice.trackingCode}</p>
+                                        </div>
+                                        <div>
+                                          <p className="text-gray-600">Đơn vị vận chuyển</p>
+                                          <p className="font-semibold text-gray-800">{invoice.carrier || 'Chưa cập nhật'}</p>
+                                        </div>
+                                        {invoice.shippedAt && (
+                                          <div className="col-span-2">
+                                            <p className="text-gray-600">Ngày giao hàng</p>
+                                            <p className="font-semibold text-gray-800">
+                                              {new Date(invoice.shippedAt).toLocaleString('vi-VN')}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Dispute Details */}
+                                  {dispute ? (
+                                    <>
+                                      {/* Dispute Reason */}
+                                      <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-4">
+                                        <div className="flex items-start gap-3 mb-3">
+                                          <FileText className="text-orange-600 mt-1" size={20} />
+                                          <div className="flex-1">
+                                            <h4 className="text-sm font-bold text-gray-800 mb-1">
+                                              Lý do khiếu nại của bạn
+                                            </h4>
+                                            <p className="text-xs text-gray-500">
+                                              Mã khiếu nại: #{dispute.id} | Ngày gửi: {new Date(dispute.createdAt).toLocaleString('vi-VN')}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="bg-white rounded-lg p-4 border border-orange-200">
+                                          <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                                            {dispute.reason}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      {/* Admin Response */}
+                                      {dispute.adminNote ? (
+                                        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-4">
+                                          <div className="flex items-start gap-3 mb-3">
+                                            <CheckCircle className="text-green-600 mt-1" size={20} />
+                                            <div className="flex-1">
+                                              <h4 className="text-sm font-bold text-gray-800 mb-1">
+                                                Phản hồi từ Admin
+                                              </h4>
+                                              {dispute.resolvedAt && (
+                                                <p className="text-xs text-green-600">
+                                                  Xử lý vào: {new Date(dispute.resolvedAt).toLocaleString('vi-VN')}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="bg-white rounded-lg p-4 border border-green-200">
+                                            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                                              {dispute.adminNote}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 mb-4">
+                                          <div className="flex items-center gap-3">
+                                            <Clock className="text-yellow-600" size={20} />
+                                            <div>
+                                              <p className="text-sm font-semibold text-yellow-800">
+                                                Đang chờ Admin xử lý
+                                              </p>
+                                              <p className="text-xs text-yellow-700 mt-1">
+                                                Chúng tôi sẽ xem xét và phản hồi khiếu nại của bạn sớm nhất có thể
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+                                      <div className="flex items-center gap-3">
+                                        <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+                                        <p className="text-sm text-gray-600">
+                                          Đang tải thông tin khiếu nại...
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Action Buttons */}
+                                  <div className="flex gap-3 pt-4 border-t">
+                                    <button
+                                      onClick={() => navigate(`/invoice/${invoice.id}`)}
+                                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                                    >
+                                      <FileText size={18} />
+                                      Xem hóa đơn chi tiết
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Pagination */}
+                        {disputesTotalPages > 1 && (
+                          <Pagination
+                            currentPage={disputesPage}
+                            totalPages={disputesTotalPages}
+                            onPageChange={setDisputesPage}
+                            itemsPerPage={disputesPageSize}
+                            totalItems={disputesTotalElements}
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -1498,7 +1922,7 @@ const UserDetail = () => {
 
       {/* Address Selection Modal */}
       {showAddressModal && selectedInvoiceForPayment && (
-        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-800">Chọn địa chỉ nhận hàng</h2>
@@ -1629,7 +2053,7 @@ const UserDetail = () => {
 
       {/* Create Address Modal */}
       {showCreateAddressModal && (
-        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b flex items-center justify-between sticky top-0 bg-white">
               <h2 className="text-2xl font-bold text-gray-800">Thêm địa chỉ mới</h2>
@@ -1759,27 +2183,9 @@ const UserDetail = () => {
         </div>
       )}
 
-      {/* Invoice Modal */}
-      {showInvoiceModal && selectedInvoiceId && (
-        <div className="fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-600 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-auto">
-            <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-              <h2 className="text-2xl font-bold text-gray-800">Chi tiết hóa đơn</h2>
-              <button
-                onClick={() => setShowInvoiceModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={24} className="text-gray-600" />
-              </button>
-            </div>
-            <Invoice invoiceId={selectedInvoiceId} />
-          </div>
-        </div>
-      )}
-
       {/* Feedback Modal */}
       {showFeedbackModal && selectedInvoiceForFeedback && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">
@@ -1864,6 +2270,196 @@ const UserDetail = () => {
                 {isSubmittingFeedback ? 'Đang gửi...' : 'Gửi đánh giá'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Dialog */}
+      {showConfirmDialog && selectedInvoiceForConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <CheckCircle className="text-green-600" size={24} />
+                Xác nhận nhận hàng
+              </h2>
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-gray-600 mb-1">Đơn hàng: #{selectedInvoiceForConfirm.id}</p>
+              <p className="text-sm text-gray-600">Sản phẩm: {selectedInvoiceForConfirm.product.name}</p>
+              <p className="text-sm font-bold text-gray-800 mt-1">
+                Giá: {formatCurrency(selectedInvoiceForConfirm.finalPrice)}
+              </p>
+            </div>
+
+            <p className="text-gray-700 mb-6">
+              Xác nhận bạn đã nhận được hàng và sản phẩm không có vấn đề gì?
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="flex-1 px-6 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmSubmit}
+                className="flex-1 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dispute Modal */}
+      {showDisputeModal && selectedInvoiceForDispute && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <AlertCircle className="text-red-600" size={24} />
+                Khiếu nại đơn hàng
+              </h2>
+              <button
+                onClick={() => setShowDisputeModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                ⚠️ Lưu ý: Chỉ khiếu nại nếu bạn chưa nhận được hàng hoặc hàng không đúng mô tả.
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Đơn hàng: #{selectedInvoiceForDispute.id}</p>
+              <p className="text-sm text-gray-600">Sản phẩm: {selectedInvoiceForDispute.product.name}</p>
+              <p className="text-sm font-bold text-gray-800">
+                Giá: {formatCurrency(selectedInvoiceForDispute.finalPrice)}
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Lý do khiếu nại <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                placeholder="Nhập lý do khiếu nại của bạn..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                rows={5}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDisputeModal(false)}
+                className="flex-1 px-6 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSubmitDispute}
+                disabled={isSubmittingDispute || !disputeReason}
+                className="flex-1 px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+              >
+                {isSubmittingDispute ? 'Đang gửi...' : 'Gửi khiếu nại'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dispute Detail Modal (Viewing existing dispute) */}
+      {showDisputeDetailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <AlertCircle className="text-orange-600" size={24} />
+                Chi tiết khiếu nại
+              </h2>
+              <button
+                onClick={() => {
+                  setShowDisputeDetailModal(false);
+                  setDisputeDetail(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-600" />
+              </button>
+            </div>
+
+            {isLoadingDispute ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+              </div>
+            ) : disputeDetail ? (
+              <>
+                <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Mã khiếu nại: #{disputeDetail.id}</p>
+                  <p className="text-sm text-gray-600">Đơn hàng: #{disputeDetail.invoiceId}</p>
+                  <p className="text-sm text-gray-600">Ngày tạo: {new Date(disputeDetail.createdAt).toLocaleString('vi-VN')}</p>
+                  {disputeDetail.resolvedAt && (
+                    <p className="text-sm text-green-600 font-semibold">
+                      ✅ Đã xử lý: {new Date(disputeDetail.resolvedAt).toLocaleString('vi-VN')}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Lý do khiếu nại của bạn:</label>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-gray-800 whitespace-pre-wrap">{disputeDetail.reason}</p>
+                  </div>
+                </div>
+
+                {disputeDetail.adminNote && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      📋 Phản hồi từ Admin:
+                    </label>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-gray-800 whitespace-pre-wrap">{disputeDetail.adminNote}</p>
+                    </div>
+                  </div>
+                )}
+
+                {!disputeDetail.resolvedAt && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-yellow-800">
+                      ⏳ Khiếu nại đang được xử lý. Vui lòng đợi phản hồi từ Admin.
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    setShowDisputeDetailModal(false);
+                    setDisputeDetail(null);
+                  }}
+                  className="w-full px-6 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+                >
+                  Đóng
+                </button>
+              </>
+            ) : (
+              <p className="text-center text-gray-600 py-8">Không có thông tin khiếu nại</p>
+            )}
           </div>
         </div>
       )}

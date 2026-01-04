@@ -91,14 +91,6 @@ const PaymentResult = () => {
                                     <span className="text-gray-600">Mã hóa đơn:</span>
                                     <span className="font-semibold text-gray-900">#{paymentResult.invoiceId || 'N/A'}</span>
                                 </div>
-                                {paymentResult.paymentTime && (
-                                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                                        <span className="text-gray-600">Thời gian thanh toán:</span>
-                                        <span className="font-semibold text-gray-900">
-                                            {new Date(paymentResult.paymentTime).toLocaleString('vi-VN')}
-                                        </span>
-                                    </div>
-                                )}
                                 <div className="flex justify-between items-center py-2">
                                     <span className="text-gray-600">Trạng thái:</span>
                                     <span className={`font-semibold ${isSuccess ? 'text-green-600' : 'text-red-600'}`}>

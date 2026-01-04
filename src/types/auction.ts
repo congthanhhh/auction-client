@@ -16,6 +16,7 @@ export interface HighestBidder {
 export interface SimpleProductResponse {
     id: number;
     name: string;
+    seller: SimpleUserResponse;
     description: string;
     startPrice: number;
     images: Array<{ id: number; url: string }>;

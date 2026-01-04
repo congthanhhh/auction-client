@@ -134,140 +134,167 @@ const Invoice = ({ invoiceId: propInvoiceId }: InvoiceProps) => {
       </div>
 
       <div className="p-8 space-y-6">
-        {/* Product Info */}
-        <div className="border-b pb-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Package size={20} className="text-indigo-600" />
-            Thông tin sản phẩm
-          </h3>
-          <div className="flex gap-4">
-            <img
-              src={mainImage}
-              alt={invoice.product.name}
-              className="w-24 h-24 object-cover rounded-lg border-2 border-gray-200"
-            />
-            <div className="flex-1">
-              <h4 className="font-bold text-gray-900 mb-2">{invoice.product.name}</h4>
-              <p className="text-sm text-gray-600 mb-1">Mã phiên: #{invoice.auctionSessionId}</p>
-              <p className="text-lg font-bold text-indigo-600">{formatCurrency(invoice.finalPrice)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Buyer Info */}
-        <div className="border-b pb-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <User size={20} className="text-indigo-600" />
-            Thông tin người mua
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3">
-              <User size={18} className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Tên người mua</p>
-                <p className="font-semibold text-gray-900">{fullName || invoice.user.username}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Mail size={18} className="text-gray-400 mt-1" />
-              <div>
-                <p className="text-sm text-gray-600">Email</p>
-                <p className="font-semibold text-gray-900">{invoice.user.email}</p>
-              </div>
-            </div>
-            {invoice.user.phoneNumber && (
-              <div className="flex items-start gap-3">
-                <Phone size={18} className="text-gray-400 mt-1" />
-                <div>
-                  <p className="text-sm text-gray-600">Số điện thoại</p>
-                  <p className="font-semibold text-gray-900">{invoice.user.phoneNumber}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Shipping Info (only for AUCTION_SALE) */}
-        {invoice.type === 'AUCTION_SALE' && invoice.shippingAddress && (
-          <div className="border-b pb-6">
+        {/* Row 1: Product Info + Shipping Tracking */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border-b pb-6">
+          {/* Product Info */}
+          <div>
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Truck size={20} className="text-indigo-600" />
-              Thông tin giao hàng
+              <Package size={20} className="text-indigo-600" />
+              Thông tin sản phẩm
             </h3>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <User size={18} className="text-gray-400 mt-1" />
-                <div>
-                  <p className="text-sm text-gray-600">Người nhận</p>
-                  <p className="font-semibold text-gray-900">{invoice.recipientName}</p>
-                </div>
+            <div className="flex gap-3">
+              <img
+                src={mainImage}
+                alt={invoice.product.name}
+                className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
+              />
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-900 mb-1 text-sm">{invoice.product.name}</h4>
+                <p className="text-xs text-gray-600 mb-1">Mã phiên: #{invoice.auctionSessionId}</p>
+                <p className="text-lg font-bold text-indigo-600">{formatCurrency(invoice.finalPrice)}</p>
               </div>
-              <div className="flex items-start gap-3">
-                <Phone size={18} className="text-gray-400 mt-1" />
-                <div>
-                  <p className="text-sm text-gray-600">Số điện thoại</p>
-                  <p className="font-semibold text-gray-900">{invoice.recipientPhone}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <MapPin size={18} className="text-gray-400 mt-1" />
-                <div>
-                  <p className="text-sm text-gray-600">Địa chỉ giao hàng</p>
-                  <p className="font-semibold text-gray-900">{invoice.shippingAddress}</p>
-                </div>
-              </div>
-              {invoice.trackingCode && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Truck size={18} className="text-blue-600" />
-                    <p className="text-sm font-semibold text-blue-800">Thông tin vận chuyển</p>
+            </div>
+          </div>
+
+          {/* Shipping Tracking */}
+          {invoice.trackingCode ? (
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <Truck size={20} className="text-indigo-600" />
+                Thông tin vận chuyển
+              </h3>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Truck size={16} className="text-blue-600" />
+                    <p className="text-sm font-semibold text-blue-800">Đơn vị vận chuyển</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-gray-700">
-                      <span className="font-medium">Đơn vị vận chuyển:</span> {invoice.carrier}
+                  <p className="text-sm text-gray-700 pl-6">
+                    <span className="font-medium">{invoice.carrier}</span>
+                  </p>
+                  <p className="text-sm text-gray-700 pl-6">
+                    <span className="font-medium">Mã vận đơn:</span> {invoice.trackingCode}
+                  </p>
+                  {invoice.shippedAt && (
+                    <p className="text-xs text-gray-600 pl-6">
+                      <span className="font-medium">Ngày gửi:</span> {formatDate(invoice.shippedAt)}
                     </p>
-                    <p className="text-sm text-gray-700">
-                      <span className="font-medium">Mã vận đơn:</span> {invoice.trackingCode}
-                    </p>
-                    {invoice.shippedAt && (
-                      <p className="text-sm text-gray-700">
-                        <span className="font-medium">Ngày gửi hàng:</span> {formatDate(invoice.shippedAt)}
-                      </p>
-                    )}
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <Truck size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Chưa có thông tin vận chuyển</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Row 2: Buyer Info + Delivery Info */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border-b pb-6">
+          {/* Buyer Info */}
+          <div>
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <User size={20} className="text-indigo-600" />
+              Thông tin người mua
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <User size={16} className="text-gray-400 mt-1" />
+                <div>
+                  <p className="text-xs text-gray-600">Tên người mua</p>
+                  <p className="font-semibold text-gray-900 text-sm">{fullName || invoice.user.username}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Mail size={16} className="text-gray-400 mt-1" />
+                <div>
+                  <p className="text-xs text-gray-600">Email</p>
+                  <p className="font-semibold text-gray-900 text-sm">{invoice.user.email}</p>
+                </div>
+              </div>
+              {invoice.user.phoneNumber && (
+                <div className="flex items-start gap-3">
+                  <Phone size={16} className="text-gray-400 mt-1" />
+                  <div>
+                    <p className="text-xs text-gray-600">Số điện thoại</p>
+                    <p className="font-semibold text-gray-900 text-sm">{invoice.user.phoneNumber}</p>
                   </div>
                 </div>
               )}
             </div>
           </div>
-        )}
 
+          {/* Delivery Info */}
+          {invoice.type === 'AUCTION_SALE' && invoice.shippingAddress ? (
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <MapPin size={20} className="text-indigo-600" />
+                Thông tin giao hàng
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <User size={16} className="text-gray-400 mt-1" />
+                  <div>
+                    <p className="text-xs text-gray-600">Người nhận</p>
+                    <p className="font-semibold text-gray-900 text-sm">{invoice.recipientName}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Phone size={16} className="text-gray-400 mt-1" />
+                  <div>
+                    <p className="text-xs text-gray-600">Số điện thoại</p>
+                    <p className="font-semibold text-gray-900 text-sm">{invoice.recipientPhone}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <MapPin size={16} className="text-gray-400 mt-1" />
+                  <div>
+                    <p className="text-xs text-gray-600">Địa chỉ giao hàng</p>
+                    <p className="font-semibold text-gray-900 text-sm">{invoice.shippingAddress}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <MapPin size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Không có thông tin giao hàng</p>
+              </div>
+            </div>
+          )}
+        </div>
         {/* Payment Timeline */}
-        <div>
+        <div className="border-b pb-6">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <Calendar size={20} className="text-indigo-600" />
             Lịch sử thanh toán
           </h3>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-start gap-3">
-              <Calendar size={18} className="text-gray-400 mt-1" />
+              <Calendar size={16} className="text-gray-400 mt-1" />
               <div>
-                <p className="text-sm text-gray-600">Ngày tạo hóa đơn</p>
-                <p className="font-semibold text-gray-900">{formatDate(invoice.createdAt)}</p>
+                <p className="text-xs text-gray-600">Ngày tạo hóa đơn</p>
+                <p className="font-semibold text-gray-900 text-sm">{formatDate(invoice.createdAt)}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Clock size={18} className="text-gray-400 mt-1" />
+              <Clock size={16} className="text-gray-400 mt-1" />
               <div>
-                <p className="text-sm text-gray-600">Hạn thanh toán</p>
-                <p className="font-semibold text-gray-900">{formatDate(invoice.dueDate)}</p>
+                <p className="text-xs text-gray-600">Hạn thanh toán</p>
+                <p className="font-semibold text-gray-900 text-sm">{formatDate(invoice.dueDate)}</p>
               </div>
             </div>
             {invoice.paymentTime && (
               <div className="flex items-start gap-3">
-                <CheckCircle size={18} className="text-green-600 mt-1" />
+                <CheckCircle size={16} className="text-green-600 mt-1" />
                 <div>
-                  <p className="text-sm text-gray-600">Đã thanh toán</p>
-                  <p className="font-semibold text-green-600">{formatDate(invoice.paymentTime)}</p>
+                  <p className="text-xs text-gray-600">Đã thanh toán</p>
+                  <p className="font-semibold text-green-600 text-sm">{formatDate(invoice.paymentTime)}</p>
                 </div>
               </div>
             )}
@@ -282,7 +309,7 @@ const Invoice = ({ invoiceId: propInvoiceId }: InvoiceProps) => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 
   if (isStandalonePage) {
