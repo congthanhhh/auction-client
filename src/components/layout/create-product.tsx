@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { imageService, type Image } from '@/services/imageService';
-import { categoryService, type CategoryResponse } from '@/services/categoryService';
+import { categoryService } from '@/services/categoryService';
+import type { CategoryResponse } from '@/types/category';
 import { productService } from '@/services/productService';
 import { toast } from 'sonner';
 import type { CreateProductRequest } from '@/types/product';
@@ -32,8 +33,9 @@ const CreateProduct = () => {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const data = await categoryService.getAllCategories();
-                setCategories(data);
+                // Fetch with large page size to get all categories for dropdown
+                const response = await categoryService.getAllCategories(1, 100);
+                setCategories(response.data.data);
             } catch (error) {
                 console.error('Error fetching categories:', error);
                 toast.error('Không thể tải danh mục');
@@ -143,14 +145,19 @@ const CreateProduct = () => {
 
             const response = await productService.createProduct(productRequest);
 
-            toast.success('Tạo sản phẩm thành công!');
+            toast.success('Tạo sản phẩm thành công! Vui lòng chờ admin phê duyệt.');
 
             if (createAuction) {
-                // Navigate to create auction with product data
-                navigate('/create-auction', { state: { product: response.data } });
+                // Check product status
+                if (response.data.status === 'ACTIVE') {
+                    navigate('/create-auction', { state: { product: response.data } });
+                } else {
+                    toast.warning('Sản phẩm cần được admin phê duyệt trước khi tạo đấu giá');
+                    navigate('/create-product');
+                }
             } else {
                 // Navigate to seller products
-                navigate('/seller/dashboard');
+                navigate('/create-product');
             }
         } catch (error: any) {
             console.error('Error creating product:', error);

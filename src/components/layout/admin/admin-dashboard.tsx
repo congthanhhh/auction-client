@@ -1,102 +1,193 @@
-import { Users, Package, Gavel, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Users, Package, Gavel, DollarSign, Loader2, Calendar } from "lucide-react";
+import { adminStatisticsService } from "@/services/adminStatisticsService";
+import type { StatisticResponse } from "@/types/statistics";
+import { toast } from "sonner";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid
+} from 'recharts';
 
 const AdminDashboard = () => {
-  // Mock statistics data
+  const [statistics, setStatistics] = useState<StatisticResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  useEffect(() => {
+    fetchStatistics();
+  }, [selectedMonth, selectedYear]);
+
+  const fetchStatistics = async () => {
+    try {
+      setIsLoading(true);
+      const response = await adminStatisticsService.getStatistics({
+        month: selectedMonth,
+        year: selectedMonth ? selectedYear : undefined
+      });
+      setStatistics(response.data);
+    } catch (error: any) {
+      console.error('Error fetching statistics:', error);
+      toast.error('Không thể tải thống kê');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
+
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('vi-VN').format(num);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-12 h-12 animate-spin text-purple-600" />
+      </div>
+    );
+  }
+
+  if (!statistics) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">Không có dữ liệu thống kê</p>
+      </div>
+    );
+  }
+
+  // Stats cards data
   const stats = [
     {
       title: "Tổng người dùng",
-      value: "1,234",
-      change: "+12.5%",
-      trend: "up",
+      value: formatNumber(statistics.totalUsers),
       icon: Users,
       color: "from-blue-500 to-blue-600",
+      bgLight: "bg-blue-50"
     },
     {
-      title: "Sản phẩm đang bán",
-      value: "456",
-      change: "+8.2%",
-      trend: "up",
-      icon: Package,
-      color: "from-green-500 to-green-600",
-    },
-    {
-      title: "Phiên đấu giá",
-      value: "89",
-      change: "-3.1%",
-      trend: "down",
+      title: "Phiên đấu giá đang chạy",
+      value: formatNumber(statistics.activeAuctions),
       icon: Gavel,
-      color: "from-yellow-500 to-yellow-600",
+      color: "from-green-500 to-green-600",
+      bgLight: "bg-green-50"
     },
     {
-      title: "Doanh thu tháng",
-      value: "2.5 tỷ",
-      change: "+23.4%",
-      trend: "up",
+      title: "Sản phẩm chờ duyệt",
+      value: formatNumber(statistics.pendingProducts),
+      icon: Package,
+      color: "from-yellow-500 to-yellow-600",
+      bgLight: "bg-yellow-50"
+    },
+    {
+      title: "Doanh thu ròng",
+      value: formatCurrency(statistics.totalRevenue),
       icon: DollarSign,
       color: "from-purple-500 to-purple-600",
+      bgLight: "bg-purple-50"
     },
   ];
 
-  // Mock recent activities
-  const recentActivities = [
+  // Data for Pie Chart
+  const pieData = [
+    { name: 'Phí niêm yết', value: statistics.totalListingFee, color: '#10b981' },
+    { name: 'Hoa hồng', value: statistics.commissionRevenue, color: '#a855f7' },
+  ];
+
+  // Data for Bar Chart
+  const barData = [
     {
-      id: 1,
-      user: "Nguyễn Văn A",
-      action: "đã đấu giá thành công",
-      product: "iPhone 15 Pro Max",
-      time: "5 phút trước",
-      amount: "25,000,000 VNĐ",
+      name: 'GMV',
+      value: statistics.totalGMV,
+      fill: '#3b82f6'
     },
     {
-      id: 2,
-      user: "Trần Thị B",
-      action: "đã đăng ký tài khoản",
-      product: "",
-      time: "15 phút trước",
-      amount: "",
+      name: 'Phí niêm yết',
+      value: statistics.totalListingFee,
+      fill: '#10b981'
     },
     {
-      id: 3,
-      user: "Lê Văn C",
-      action: "đã tạo phiên đấu giá",
-      product: "MacBook Pro M3",
-      time: "30 phút trước",
-      amount: "30,000,000 VNĐ",
+      name: 'Hoa hồng',
+      value: statistics.commissionRevenue,
+      fill: '#a855f7'
     },
     {
-      id: 4,
-      user: "Phạm Thị D",
-      action: "đã thanh toán đơn hàng",
-      product: "AirPods Pro",
-      time: "1 giờ trước",
-      amount: "5,500,000 VNĐ",
-    },
-    {
-      id: 5,
-      user: "Hoàng Văn E",
-      action: "đã đấu giá",
-      product: "iPad Air",
-      time: "2 giờ trước",
-      amount: "12,000,000 VNĐ",
+      name: 'Doanh thu ròng',
+      value: statistics.totalRevenue,
+      fill: '#f97316'
     },
   ];
 
-  // Mock top products
-  const topProducts = [
-    { name: "iPhone 15 Pro Max", bids: 45, current: "25,000,000 VNĐ" },
-    { name: "MacBook Pro M3", bids: 38, current: "35,000,000 VNĐ" },
-    { name: "Samsung Galaxy S24", bids: 32, current: "18,000,000 VNĐ" },
-    { name: "iPad Pro M2", bids: 28, current: "20,000,000 VNĐ" },
-    { name: "Apple Watch Ultra", bids: 25, current: "15,000,000 VNĐ" },
-  ];
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
+          <p className="font-semibold text-gray-800">{payload[0].name}</p>
+          <p className="text-sm text-gray-600">{formatCurrency(payload[0].value)}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
 
   return (
     <div className="space-y-6">
+      {/* Filter Section */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center gap-4">
+          <Calendar className="w-5 h-5 text-gray-600" />
+          <h3 className="font-semibold text-gray-800">Lọc thống kê</h3>
+          <div className="flex items-center gap-4 ml-auto">
+            <select
+              value={selectedMonth || ''}
+              onChange={(e) => setSelectedMonth(e.target.value ? Number(e.target.value) : undefined)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="">Tất cả các tháng</option>
+              {[...Array(12)].map((_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  Tháng {i + 1}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              {[...Array(5)].map((_, i) => {
+                const year = new Date().getFullYear() - i;
+                return (
+                  <option key={year} value={year}>
+                    Năm {year}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
-          const TrendIcon = stat.trend === "up" ? TrendingUp : TrendingDown;
           return (
             <div
               key={index}
@@ -108,121 +199,137 @@ const AdminDashboard = () => {
                 >
                   <Icon size={24} className="text-white" />
                 </div>
-                <div
-                  className={`flex items-center gap-1 text-sm font-semibold ${
-                    stat.trend === "up" ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  <TrendIcon size={16} />
-                  <span>{stat.change}</span>
-                </div>
               </div>
               <h3 className="text-gray-600 text-sm font-medium mb-1">{stat.title}</h3>
-              <p className="text-3xl font-bold text-gray-800">{stat.value}</p>
+              <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
             </div>
           );
         })}
       </div>
 
+      {/* Revenue Breakdown Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activities */}
+        {/* Bar Chart - Revenue Comparison */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4 pb-3 border-b border-gray-200">
-            Hoạt động gần đây
+          <h3 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">
+            So sánh doanh thu
           </h3>
-          <div className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                  {activity.user.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-800">
-                    <span className="font-semibold">{activity.user}</span>{" "}
-                    <span className="text-gray-600">{activity.action}</span>
-                    {activity.product && (
-                      <>
-                        {" "}
-                        <span className="font-semibold text-yellow-600">
-                          {activity.product}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                    {activity.amount && (
-                      <>
-                        <span className="text-gray-300">•</span>
-                        <p className="text-xs font-semibold text-green-600">
-                          {activity.amount}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={barData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 12 }}
+                stroke="#6b7280"
+              />
+              <YAxis
+                tick={{ fontSize: 12 }}
+                stroke="#6b7280"
+                tickFormatter={(value) => {
+                  if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B`;
+                  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+                  return value;
+                }}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* Top Products */}
+        {/* Pie Chart - Revenue Distribution */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4 pb-3 border-b border-gray-200">
-            Sản phẩm hot nhất
+          <h3 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">
+            Phân bổ doanh thu
           </h3>
-          <div className="space-y-4">
-            {topProducts.map((product, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+          <ResponsiveContainer width="100%" height={350}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(1)}%`}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
               >
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                  {index + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 truncate">
-                    {product.name}
-                  </p>
-                  <p className="text-sm text-gray-600">{product.bids} lượt đấu giá</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-yellow-600">{product.current}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+              <Legend
+                verticalAlign="bottom"
+                height={36}
+                formatter={(value, entry: any) => (
+                  <span className="text-sm text-gray-700">
+                    {value}: {formatCurrency(entry.payload.value)}
+                  </span>
+                )}
+              />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Simple Chart Representation */}
+      {/* Revenue Details Table */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h3 className="text-xl font-bold text-gray-800 mb-4 pb-3 border-b border-gray-200">
-          Doanh thu 7 ngày qua
+        <h3 className="text-xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-200">
+          Chi tiết doanh thu
         </h3>
-        <div className="flex items-end justify-between gap-4 h-64">
-          {[
-            { day: "T2", value: 70 },
-            { day: "T3", value: 85 },
-            { day: "T4", value: 60 },
-            { day: "T5", value: 90 },
-            { day: "T6", value: 100 },
-            { day: "T7", value: 75 },
-            { day: "CN", value: 95 },
-          ].map((item, index) => (
-            <div key={index} className="flex-1 flex flex-col items-center gap-2">
-              <div className="w-full bg-gray-100 rounded-lg overflow-hidden relative" style={{ height: "200px" }}>
-                <div
-                  className="absolute bottom-0 w-full bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-lg transition-all duration-300 hover:from-yellow-600 hover:to-yellow-500"
-                  style={{ height: `${item.value}%` }}
-                ></div>
-              </div>
-              <p className="text-sm font-semibold text-gray-600">{item.day}</p>
+        <div className="space-y-4">
+          {/* Total GMV */}
+          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+              <span className="font-medium text-gray-800">Tổng GMV (Giá trị giao dịch)</span>
             </div>
-          ))}
+            <span className="text-xl font-bold text-blue-600">{formatCurrency(statistics.totalGMV)}</span>
+          </div>
+
+          {/* Listing Fee */}
+          <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-green-600"></div>
+              <div>
+                <span className="font-medium text-gray-800">Phí niêm yết</span>
+                <p className="text-xs text-gray-600">
+                  {((statistics.totalListingFee / statistics.totalGMV) * 100).toFixed(2)}% của GMV
+                </p>
+              </div>
+            </div>
+            <span className="text-xl font-bold text-green-600">{formatCurrency(statistics.totalListingFee)}</span>
+          </div>
+
+          {/* Commission Revenue */}
+          <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-purple-600"></div>
+              <div>
+                <span className="font-medium text-gray-800">Doanh thu hoa hồng</span>
+                <p className="text-xs text-gray-600">
+                  {((statistics.commissionRevenue / statistics.totalGMV) * 100).toFixed(2)}% của GMV
+                </p>
+              </div>
+            </div>
+            <span className="text-xl font-bold text-purple-600">{formatCurrency(statistics.commissionRevenue)}</span>
+          </div>
+
+          {/* Net Revenue */}
+          <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-orange-600"></div>
+              <div>
+                <span className="font-bold text-gray-800">Doanh thu ròng (Net Revenue)</span>
+                <p className="text-xs text-gray-600">
+                  {((statistics.totalRevenue / statistics.totalGMV) * 100).toFixed(2)}% của GMV
+                </p>
+              </div>
+            </div>
+            <span className="text-2xl font-bold text-orange-600">{formatCurrency(statistics.totalRevenue)}</span>
+          </div>
         </div>
       </div>
     </div>

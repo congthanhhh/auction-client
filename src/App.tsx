@@ -4,23 +4,20 @@ import Home from './components/layout/home'
 import SearchResults from './components/layout/search-results'
 import AuctionDetail from './components/layout/auction-detail'
 import UserDetail from './components/layout/user-detail'
-import ProductDetail from './components/layout/product-detail'
 import CreateAuction from './components/layout/create-auction'
 import NotificationsPage from './components/layout/notifications'
 import Payment from './components/layout/payment'
 import Shipping from './components/layout/shipping'
 import Invoice from './components/layout/invoice'
 import AllAuctionsPage from './components/layout/all-auctions'
+import PublicProfile from './components/layout/PublicProfile'
 import AdminLayout from './components/layout/admin/admin-layout'
 import AdminDashboard from './components/layout/admin/admin-dashboard'
 import AdminUsers from './components/layout/admin/admin-users'
 import AdminProducts from './components/layout/admin/admin-products'
 import AdminAuctions from './components/layout/admin/admin-auctions'
-import AdminOrders from './components/layout/admin/admin-orders'
-import AdminReports from './components/layout/admin/admin-reports'
 import AdminDisputes from './components/layout/admin/admin-disputes'
 import AdminCategories from './components/layout/admin/admin-categories'
-import AdminVerification from './components/layout/admin/admin-verification'
 import AdminSettings from './components/layout/admin/admin-settings'
 import AdminLogs from './components/layout/admin/admin-logs'
 import SellerDashboard from './components/layout/seller-dashboard'
@@ -30,6 +27,7 @@ import { useEffect } from 'react'
 import Authenticate from './components/pages/Authenticate.js'
 import CreateProduct from './components/layout/create-product.js'
 import MyOrder from './components/layout/MyOrder.js'
+import AdminInvoices from './components/layout/admin/admin-invoices.js'
 
 function App() {
 
@@ -57,8 +55,9 @@ function App() {
         <Route path="/search" element={<SearchResults />} />
         <Route path="/all-auctions" element={<AllAuctionsPage />} />
         <Route path="/auction/:auctionId" element={<AuctionDetail />} />
-        <Route path="/product/:productId" element={<ProductDetail />} />
+        {/* <Route path="/product/:productId" element={<ProductDetail />} /> */}
         <Route path="/user/profile" element={<UserDetail />} />
+        <Route path="/profile/:userId" element={<PublicProfile />} />
         <Route path="/create-auction" element={<CreateAuction />} />
         <Route path="/create-product" element={<CreateProduct />} />
         <Route path="/notifications" element={<NotificationsPage />} />
@@ -78,11 +77,9 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="auctions" element={<AdminAuctions />} />
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="reports" element={<AdminReports />} />
+          <Route path="invoices" element={<AdminInvoices />} />
           <Route path="disputes" element={<AdminDisputes />} />
           <Route path="categories" element={<AdminCategories />} />
-          <Route path="verification" element={<AdminVerification />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="logs" element={<AdminLogs />} />
         </Route>

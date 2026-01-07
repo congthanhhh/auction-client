@@ -1,9 +1,36 @@
 // src/types/product.ts
 
+import type { SimpleUserResponse } from "./user";
+
+export type ProductStatus = 'WAITING_FOR_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'BANNED';
+
 export interface Category {
     id: number;
     name: string;
     description: string;
+}
+
+export interface CategoryResponse {
+    id: number;
+    name: string;
+    description: string;
+}
+
+export interface Image {
+    id: number;
+    publicId: string;
+    url: string;
+}
+
+export interface ProductSearchRequest {
+    keyword?: string;
+    categoryId?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    sort?: string;
+    status?: ProductStatus;
+    sellerId?: string;
+    isActive?: boolean;
 }
 
 export interface Seller {
@@ -24,10 +51,25 @@ export interface Product {
     description: string;
     startPrice: number;
     createdAt: string;
-    category: Category;
-    seller: Seller;
+    category: CategoryResponse;
+    seller: SimpleUserResponse;
+    status: ProductStatus;
     attributes: string;  // Backend expects String, not array
-    images: ProductImage[];
+    images: Image[];
+}
+
+export interface ProductResponse {
+    id: number;
+    name: string;
+    description: string;
+    startPrice: number;
+    createdAt: string;
+    category: CategoryResponse;
+    seller: SimpleUserResponse;
+    status: ProductStatus;
+    attributes: string;
+    images: Image[];
+    isActive?: boolean;
 }
 
 export interface CreateProductRequest {
@@ -46,7 +88,8 @@ export interface CreateProductResponse {
     startPrice: number;
     createdAt: string;
     category: Category;
-    seller: Seller;
+    seller: SimpleUserResponse;
+    status: ProductStatus;
     attributes: string;  // Backend returns String
     images: ProductImage[];
 }

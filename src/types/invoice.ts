@@ -36,10 +36,23 @@ export interface DisputeRequest {
     reason: string;
 }
 
+export type DisputeDecision = 'PENDING' | 'REFUND_TO_BUYER' | 'RELEASE_TO_SELLER';
+
+export interface DisputeSearchRequest {
+    decision?: DisputeDecision;
+    sort?: string; // "oldest", "resolved_newest", "resolved_oldest", or default (newest)
+}
+
+export interface ResolveDisputeRequest {
+    decision: DisputeDecision;
+    adminNote?: string;
+}
+
 export interface DisputeResponse {
     id: number;
     invoiceId: number;
     reason: string;
+    decision: DisputeDecision;
     adminNote?: string;
     createdAt: string; // ISO 8601 format
     resolvedAt?: string; // ISO 8601 format
@@ -47,4 +60,22 @@ export interface DisputeResponse {
 
 export interface MessageResponse {
     message: string;
+}
+
+// Admin types
+export interface InvoiceAdminSearchRequest {
+    keyword?: string; // Tìm chung cho: ID Invoice, Username, Tên sản phẩm
+    status?: InvoiceStatus;
+    type?: InvoiceType;
+    sort?: string; // 'oldest' | 'price_asc' | 'price_desc' | 'due_date_asc' | 'due_date_desc'
+}
+
+export interface AdminUpdateInvoiceRequest {
+    status?: InvoiceStatus;
+    trackingCode?: string;
+    carrier?: string;
+    recipientName?: string;
+    recipientPhone?: string;
+    shippingAddress?: string;
+    note?: string;
 }

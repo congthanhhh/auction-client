@@ -15,12 +15,16 @@ import {
   Clock,
   AlertCircle,
   FileText,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import { invoiceService } from '@/services/invoiceService';
 import type { InvoiceResponse } from '@/types/invoice';
 import Header from './header';
 import Footer from './footer';
+import { paymentService } from '@/services/paymentService';
+import { addressService, type AddressResponse } from '@/services/addressService';
+import { toast } from 'sonner';
 
 interface InvoiceProps {
   invoiceId?: string | number;
@@ -33,6 +37,10 @@ const Invoice = ({ invoiceId: propInvoiceId }: InvoiceProps) => {
   const [invoice, setInvoice] = useState<InvoiceResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [addresses, setAddresses] = useState<AddressResponse[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -53,6 +61,65 @@ const Invoice = ({ invoiceId: propInvoiceId }: InvoiceProps) => {
       fetchInvoice();
     }
   }, [invoiceId]);
+
+  const fetchAddresses = async () => {
+    try {
+      setIsLoadingAddresses(true);
+      const response = await addressService.getMyAddresses();
+      setAddresses(response.data);
+      // Auto-select default address
+      const defaultAddr = response.data.find(addr => addr.isDefault);
+      if (defaultAddr) {
+        setSelectedAddressId(defaultAddr.id);
+      }
+    } catch (error: any) {
+      console.error('Error fetching addresses:', error);
+      toast.error('Không thể tải danh sách địa chỉ');
+    } finally {
+      setIsLoadingAddresses(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!invoice) return;
+
+    // Check if invoice is AUCTION_SALE type, need to select address
+    if (invoice.type === 'AUCTION_SALE') {
+      // Show address selection modal
+      setShowPaymentModal(true);
+      await fetchAddresses();
+    } else {
+      // LISTING_FEE doesn't need address, pay directly
+      try {
+        const response = await paymentService.createVnPayPayment(invoice.id, 0);
+        window.location.href = response.data;
+      } catch (error: any) {
+        console.error('Error creating payment:', error);
+        toast.error('Không thể tạo thanh toán. Vui lòng thử lại.');
+      }
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!invoice) return;
+
+    if (invoice.type === 'AUCTION_SALE' && !selectedAddressId) {
+      toast.error('Vui lòng chọn địa chỉ nhận hàng');
+      return;
+    }
+
+    try {
+      const response = await paymentService.createVnPayPayment(
+        invoice.id,
+        selectedAddressId || 0
+      );
+      // Redirect to VNPay payment URL
+      window.location.href = response.data;
+    } catch (error: any) {
+      console.error('Error creating payment:', error);
+      toast.error('Không thể tạo thanh toán. Vui lòng thử lại.');
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -308,7 +375,131 @@ const Invoice = ({ invoiceId: propInvoiceId }: InvoiceProps) => {
             <span className="text-3xl font-bold text-indigo-600">{formatCurrency(invoice.finalPrice)}</span>
           </div>
         </div>
+
+        {/* Payment Button */}
+        {invoice.status === 'PENDING' && (
+          <div className="mt-6">
+            <button
+              onClick={handlePayment}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            >
+              <CreditCard size={20} />
+              Thanh toán ngay
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Address Selection Modal */}
+      {showPaymentModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowPaymentModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-800">Chọn địa chỉ nhận hàng</h2>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={24} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {isLoadingAddresses ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                </div>
+              ) : addresses.length === 0 ? (
+                <div className="text-center py-12">
+                  <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">Bạn chưa có địa chễ nào</p>
+                  <button
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      // Navigate to user profile to add address
+                      window.location.href = '/seller/dashboard';
+                    }}
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Thêm địa chỉ
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {addresses.map((address) => (
+                    <div
+                      key={address.id}
+                      onClick={() => setSelectedAddressId(address.id)}
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedAddressId === address.id
+                        ? 'border-indigo-600 bg-indigo-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="font-semibold text-gray-900">{address.recipientName}</p>
+                            {address.isDefault && (
+                              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                                Mặc định
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mb-1">
+                            <Phone className="inline w-4 h-4 mr-1" />
+                            {address.phoneNumber}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            <MapPin className="inline w-4 h-4 mr-1" />
+                            {address.street}, {address.ward}, {address.district}, {address.city}
+                          </p>
+                        </div>
+                        <div className="ml-4">
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedAddressId === address.id
+                              ? 'border-indigo-600 bg-indigo-600'
+                              : 'border-gray-300'
+                              }`}
+                          >
+                            {selectedAddressId === address.id && (
+                              <CheckCircle className="w-4 h-4 text-white" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {addresses.length > 0 && (
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => setShowPaymentModal(false)}
+                    className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={handleConfirmPayment}
+                    disabled={!selectedAddressId}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Xác nhận thanh toán
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 

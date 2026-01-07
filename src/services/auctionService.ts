@@ -58,5 +58,30 @@ export const auctionService = {
 
     getBidCountByProduct(productId: number) {
         return axiosClient.get<number>(`/auction-sessions/count/${productId}`);
+    },
+
+    // GET seller's active auctions (public - no authentication required)
+    getSellerActiveSessions(sellerId: string, page: number = 0, size: number = 10) {
+        return axiosClient.get<PageResponse<AuctionSessionResponse>>(`/auction-sessions/seller/${sellerId}/active`, {
+            params: { page, size }
+        });
+    },
+
+    // Admin endpoints
+    // GET /auction-sessions/admin/search - Get all auction sessions for admin
+    getAllSessionsForAdmin(request: import('@/types/auction').AuctionSessionAdminSearchRequest, page: number = 1, size: number = 10) {
+        return axiosClient.get<PageResponse<import('@/types/auction').AdminAuctionSessionResponse>>('/auction-sessions/admin/search', {
+            params: { ...request, page, size }
+        });
+    },
+
+    // PUT /auction-sessions/admin/{auctionId} - Update auction session for admin
+    updateSessionForAdmin(auctionId: number, request: import('@/types/auction').AdminUpdateSessionRequest) {
+        return axiosClient.put<import('@/types/auction').AdminAuctionSessionResponse>(`/auction-sessions/admin/${auctionId}`, request);
+    },
+
+    // POST /auction-sessions/{auctionId}/buy-now - Buy now
+    buyNow(auctionId: number) {
+        return axiosClient.post<import('@/types/invoice').InvoiceResponse>(`/auction-sessions/${auctionId}/buy-now`);
     }
 };

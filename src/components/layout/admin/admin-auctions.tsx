@@ -1,127 +1,78 @@
-import { useState } from "react";
-import { Search, Play, Pause, StopCircle, Edit, Trash2, Eye } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Edit, Eye, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-
-interface Auction {
-  id: number;
-  productName: string;
-  seller: string;
-  startPrice: string;
-  currentPrice: string;
-  buyNowPrice: string;
-  startTime: string;
-  endTime: string;
-  status: "upcoming" | "active" | "ended";
-  totalBids: number;
-  participants: number;
-  highestBidder: string;
-}
+import { auctionService } from "@/services/auctionService";
+import type { AdminAuctionSessionResponse, AuctionStatus, SimpleProductResponse, SimpleUserResponse } from "@/types/auction";
+import UpdateAuctionModal from "@/components/pop-up/update-auction-modal";
+import DetailModal from "@/components/pop-up/detail-modal";
+import Pagination from "@/components/ui/pagination";
 
 const AdminAuctions = () => {
+  const [auctions, setAuctions] = useState<AdminAuctionSessionResponse[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "upcoming" | "active" | "ended">("all");
+  const [filterStatus, setFilterStatus] = useState<AuctionStatus | "ALL">("ALL");
+  const [sortOption, setSortOption] = useState("newest");
 
-  // Mock auctions data
-  const [auctions] = useState<Auction[]>([
-    {
-      id: 1,
-      productName: "iPhone 15 Pro Max 256GB",
-      seller: "Nguyễn Văn A",
-      startPrice: "20,000,000",
-      currentPrice: "25,000,000",
-      buyNowPrice: "30,000,000",
-      startTime: "15/12/2024 10:00",
-      endTime: "22/12/2024 22:00",
-      status: "active",
-      totalBids: 45,
-      participants: 12,
-      highestBidder: "Hoàng Văn E",
-    },
-    {
-      id: 2,
-      productName: "MacBook Pro M3 16inch",
-      seller: "Trần Thị B",
-      startPrice: "30,000,000",
-      currentPrice: "35,000,000",
-      buyNowPrice: "40,000,000",
-      startTime: "16/12/2024 14:00",
-      endTime: "23/12/2024 20:00",
-      status: "active",
-      totalBids: 38,
-      participants: 10,
-      highestBidder: "Phạm Thị D",
-    },
-    {
-      id: 3,
-      productName: "Samsung Galaxy S24 Ultra",
-      seller: "Lê Văn C",
-      startPrice: "15,000,000",
-      currentPrice: "18,000,000",
-      buyNowPrice: "22,000,000",
-      startTime: "17/12/2024 09:00",
-      endTime: "24/12/2024 18:00",
-      status: "active",
-      totalBids: 32,
-      participants: 9,
-      highestBidder: "Vũ Thị F",
-    },
-    {
-      id: 4,
-      productName: "iPad Pro M2 12.9inch",
-      seller: "Phạm Thị D",
-      startPrice: "18,000,000",
-      currentPrice: "0",
-      buyNowPrice: "25,000,000",
-      startTime: "25/12/2024 10:00",
-      endTime: "30/12/2024 22:00",
-      status: "upcoming",
-      totalBids: 0,
-      participants: 0,
-      highestBidder: "-",
-    },
-    {
-      id: 5,
-      productName: "Apple Watch Ultra 2",
-      seller: "Hoàng Văn E",
-      startPrice: "12,000,000",
-      currentPrice: "15,000,000",
-      buyNowPrice: "18,000,000",
-      startTime: "10/12/2024 08:00",
-      endTime: "20/12/2024 20:00",
-      status: "ended",
-      totalBids: 25,
-      participants: 8,
-      highestBidder: "Nguyễn Văn A",
-    },
-    {
-      id: 6,
-      productName: "Sony WH-1000XM5",
-      seller: "Vũ Thị F",
-      startPrice: "6,000,000",
-      currentPrice: "8,500,000",
-      buyNowPrice: "10,000,000",
-      startTime: "12/12/2024 15:00",
-      endTime: "21/12/2024 15:00",
-      status: "ended",
-      totalBids: 18,
-      participants: 6,
-      highestBidder: "Trần Thị B",
-    },
-  ]);
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 10;
 
-  // Filter auctions
-  const filteredAuctions = auctions.filter((auction) => {
-    const matchSearch = auction.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      auction.seller.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = filterStatus === "all" || auction.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  // Modals
+  const [updateModal, setUpdateModal] = useState<AdminAuctionSessionResponse | null>(null);
+  const [detailModal, setDetailModal] = useState<{ type: 'product' | 'user'; data: SimpleProductResponse | SimpleUserResponse | null }>({ type: 'product', data: null });
 
-  const getStatusBadge = (status: Auction["status"]) => {
+  // Fetch auctions
+  const fetchAuctions = async () => {
+    setLoading(true);
+    try {
+      const response = await auctionService.getAllSessionsForAdmin(
+        {
+          productName: searchQuery || undefined,
+          status: filterStatus === "ALL" ? undefined : filterStatus,
+          sort: sortOption === 'newest' ? undefined : sortOption,
+        },
+        currentPage,
+        pageSize
+      );
+
+      setAuctions(response.data.data);
+      setTotalPages(response.data.totalPages);
+      setTotalElements(response.data.totalElements);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể tải danh sách phiên đấu giá');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAuctions();
+  }, [currentPage, filterStatus, sortOption]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentPage === 1) {
+        fetchAuctions();
+      } else {
+        setCurrentPage(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const getStatusBadge = (status: AuctionStatus) => {
     const badges = {
-      upcoming: { bg: "bg-blue-100", text: "text-blue-800", label: "Sắp diễn ra" },
-      active: { bg: "bg-green-100", text: "text-green-800", label: "Đang diễn ra" },
-      ended: { bg: "bg-gray-100", text: "text-gray-800", label: "Đã kết thúc" },
+      SCHEDULED: { bg: "bg-blue-100", text: "text-blue-800", label: "Đã lên lịch" },
+      ACTIVE: { bg: "bg-green-100", text: "text-green-800", label: "Đang diễn ra" },
+      ENDED: { bg: "bg-gray-100", text: "text-gray-800", label: "Đã kết thúc" },
+      CANCELLED: { bg: "bg-red-100", text: "text-red-800", label: "Đã hủy" },
+      FAILED: { bg: "bg-orange-100", text: "text-orange-800", label: "Thất bại" },
+      WAITING_PAYMENT: { bg: "bg-yellow-100", text: "text-yellow-800", label: "Chờ thanh toán" },
     };
     const badge = badges[status];
     return (
@@ -131,28 +82,34 @@ const AdminAuctions = () => {
     );
   };
 
-  const handleStart = (id: number, name: string) => {
-    toast.success(`Đã bắt đầu phiên đấu giá ${name}`);
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
-  const handlePause = (id: number, name: string) => {
-    toast.warning(`Đã tạm dừng phiên đấu giá ${name}`);
+  const handleUpdate = (auction: AdminAuctionSessionResponse) => {
+    setUpdateModal(auction);
   };
 
-  const handleEnd = (id: number, name: string) => {
-    if (window.confirm(`Bạn có chắc muốn kết thúc phiên đấu giá ${name}?`)) {
-      toast.info(`Đã kết thúc phiên đấu giá ${name}`);
-    }
+  const handleViewProduct = (product: SimpleProductResponse) => {
+    setDetailModal({ type: 'product', data: product });
   };
 
-  const handleEdit = (id: number) => {
-    toast.info("Chức năng chỉnh sửa đang được phát triển");
+  const handleViewUser = (user: SimpleUserResponse) => {
+    setDetailModal({ type: 'user', data: user });
   };
 
-  const handleDelete = (id: number, name: string) => {
-    if (window.confirm(`Bạn có chắc muốn xóa phiên đấu giá ${name}?`)) {
-      toast.success(`Đã xóa phiên đấu giá ${name}`);
-    }
+  const statusCounts = {
+    total: totalElements,
+    scheduled: auctions.filter((a) => a.status === "SCHEDULED").length,
+    active: auctions.filter((a) => a.status === "ACTIVE").length,
+    ended: auctions.filter((a) => a.status === "ENDED").length,
   };
 
   return (
@@ -165,7 +122,7 @@ const AdminAuctions = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Tìm kiếm phiên đấu giá..."
+              placeholder="Tìm kiếm theo tên sản phẩm..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent outline-none"
@@ -173,16 +130,34 @@ const AdminAuctions = () => {
           </div>
 
           {/* Filters */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
+              onChange={(e) => setFilterStatus(e.target.value as AuctionStatus | "ALL")}
               className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
             >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="upcoming">Sắp diễn ra</option>
-              <option value="active">Đang diễn ra</option>
-              <option value="ended">Đã kết thúc</option>
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="SCHEDULED">Đã lên lịch</option>
+              <option value="ACTIVE">Đang diễn ra</option>
+              <option value="ENDED">Đã kết thúc</option>
+              <option value="CANCELLED">Đã hủy</option>
+              <option value="FAILED">Thất bại</option>
+              <option value="WAITING_PAYMENT">Chờ thanh toán</option>
+            </select>
+
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
+            >
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="price_asc">Giá hiện tại tăng dần</option>
+              <option value="price_desc">Giá hiện tại giảm dần</option>
+              <option value="start_price_asc">Giá khởi điểm tăng dần</option>
+              <option value="start_price_desc">Giá khởi điểm giảm dần</option>
+              <option value="reserve_price_asc">Giá sàn tăng dần</option>
+              <option value="reserve_price_desc">Giá sàn giảm dần</option>
             </select>
           </div>
         </div>
@@ -191,170 +166,207 @@ const AdminAuctions = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
           <div>
             <p className="text-sm text-gray-600">Tổng phiên đấu giá</p>
-            <p className="text-2xl font-bold text-gray-800">{auctions.length}</p>
+            <p className="text-2xl font-bold text-gray-800">{statusCounts.total}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Sắp diễn ra</p>
-            <p className="text-2xl font-bold text-blue-600">
-              {auctions.filter((a) => a.status === "upcoming").length}
-            </p>
+            <p className="text-sm text-gray-600">Đã lên lịch</p>
+            <p className="text-2xl font-bold text-blue-600">{statusCounts.scheduled}</p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Đang diễn ra</p>
-            <p className="text-2xl font-bold text-green-600">
-              {auctions.filter((a) => a.status === "active").length}
-            </p>
+            <p className="text-2xl font-bold text-green-600">{statusCounts.active}</p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Đã kết thúc</p>
-            <p className="text-2xl font-bold text-gray-600">
-              {auctions.filter((a) => a.status === "ended").length}
-            </p>
+            <p className="text-2xl font-bold text-gray-600">{statusCounts.ended}</p>
           </div>
         </div>
       </div>
 
       {/* Auctions Table */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Sản phẩm
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Giá khởi điểm
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Giá hiện tại
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Mua ngay
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Thời gian
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Trạng thái
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Hoạt động
-                </th>
-                <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredAuctions.map((auction) => (
-                <tr key={auction.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="font-semibold text-gray-800">{auction.productName}</p>
-                      <p className="text-sm text-gray-500">Người bán: {auction.seller}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-semibold text-gray-800">
-                      {auction.startPrice} VNĐ
-                    </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-semibold text-green-600">
-                      {auction.currentPrice !== "0" ? `${auction.currentPrice} VNĐ` : "-"}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-semibold text-yellow-600">
-                      {auction.buyNowPrice} VNĐ
-                    </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm text-gray-800">Bắt đầu: {auction.startTime}</p>
-                    <p className="text-sm text-gray-800">Kết thúc: {auction.endTime}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                    {getStatusBadge(auction.status)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm text-gray-800">{auction.totalBids} lượt đấu giá</p>
-                    <p className="text-sm text-gray-600">{auction.participants} người tham gia</p>
-                    {auction.highestBidder !== "-" && (
-                      <p className="text-sm font-semibold text-yellow-600">
-                        Cao nhất: {auction.highestBidder}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      {auction.status === "upcoming" && (
-                        <button
-                          onClick={() => handleStart(auction.id, auction.productName)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Bắt đầu"
-                        >
-                          <Play size={18} />
-                        </button>
-                      )}
-                      {auction.status === "active" && (
-                        <>
-                          <button
-                            onClick={() => handlePause(auction.id, auction.productName)}
-                            className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                            title="Tạm dừng"
-                          >
-                            <Pause size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleEnd(auction.id, auction.productName)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Kết thúc"
-                          >
-                            <StopCircle size={18} />
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => handleEdit(auction.id)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Chỉnh sửa"
-                      >
-                        <Edit size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(auction.id, auction.productName)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="Xóa"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Hiển thị {filteredAuctions.length} / {auctions.length} phiên đấu giá
-          </p>
-          <div className="flex gap-2">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              Trước
-            </button>
-            <button className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">
-              1
-            </button>
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              Sau
-            </button>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
           </div>
-        </div>
+        ) : auctions.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Không có phiên đấu giá nào</p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Sản phẩm
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Giá
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Thời gian
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Trạng thái
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Người đặt giá
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Thao tác
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {auctions.map((auction) => (
+                    <tr key={auction.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-start gap-3">
+                          {auction.product.images && auction.product.images.length > 0 && (
+                            <img
+                              src={auction.product.images[0].url}
+                              alt={auction.product.name}
+                              className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                            />
+                          )}
+                          <div>
+                            <button
+                              onClick={() => handleViewProduct(auction.product)}
+                              className="font-semibold text-blue-600 hover:text-blue-800 text-left"
+                            >
+                              {auction.product.name}
+                            </button>
+                            <p className="text-xs text-gray-500">ID: #{auction.id}</p>
+                            <button
+                              onClick={() => handleViewUser(auction.product.seller)}
+                              className="text-xs text-gray-600 hover:text-blue-600"
+                            >
+                              Người bán: {auction.product.seller.firstName} {auction.product.seller.lastName}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1">
+                          <div>
+                            <p className="text-xs text-gray-600">Khởi điểm</p>
+                            <p className="text-sm font-semibold text-gray-800">
+                              {auction.startPrice.toLocaleString()} đ
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">Hiện tại</p>
+                            <p className="text-sm font-semibold text-green-600">
+                              {auction.currentPrice.toLocaleString()} đ
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">Giá sàn</p>
+                            <p className="text-sm font-semibold text-green-600">
+                              {auction.reservePrice.toLocaleString()} đ
+                            </p>
+                          </div>
+                          {auction.buyNowPrice && (
+                            <div>
+                              <p className="text-xs text-gray-600">Mua ngay</p>
+                              <p className="text-sm font-semibold text-yellow-600">
+                                {auction.buyNowPrice.toLocaleString()} đ
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1">
+                          <div>
+                            <p className="text-xs text-gray-600">Bắt đầu</p>
+                            <p className="text-sm text-gray-800">{formatDate(auction.startTime)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">Kết thúc</p>
+                            <p className="text-sm text-gray-800">{formatDate(auction.endTime)}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {getStatusBadge(auction.status)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {auction.highestBidder ? (
+                          <button
+                            onClick={() => handleViewUser(auction.highestBidder!)}
+                            className="text-sm hover:text-blue-600"
+                          >
+                            <p className="font-semibold text-gray-800">
+                              {auction.highestBidder.firstName} {auction.highestBidder.lastName}
+                            </p>
+                            <p className="text-xs text-gray-600">@{auction.highestBidder.username}</p>
+                            {auction.highestMaxBid && (
+                              <p className="text-xs text-green-600 font-semibold">
+                                {auction.highestMaxBid.toLocaleString()} đ
+                              </p>
+                            )}
+                          </button>
+                        ) : (
+                          <p className="text-sm text-gray-400">Chưa có</p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleUpdate(auction)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Chỉnh sửa"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleViewProduct(auction.product)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Xem chi tiết"
+                          >
+                            <Eye size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-gray-200">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+          </>
+        )}
       </div>
+
+      {/* Modals */}
+      {updateModal && (
+        <UpdateAuctionModal
+          auction={updateModal}
+          onClose={() => setUpdateModal(null)}
+          onSuccess={fetchAuctions}
+        />
+      )}
+
+      {detailModal.data && (
+        <DetailModal
+          type={detailModal.type}
+          data={detailModal.data}
+          onClose={() => setDetailModal({ type: 'product', data: null })}
+        />
+      )}
     </div>
   );
 };

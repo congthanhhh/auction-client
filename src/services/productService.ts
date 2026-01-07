@@ -1,12 +1,13 @@
 // src/services/productService.ts
 
 import axiosClient from "@/lib/axios";
-import type { CreateProductRequest, CreateProductResponse, Product, ProductListResponse } from "@/types/product";
+import type { CreateProductRequest, CreateProductResponse, Product, ProductListResponse, ProductSearchRequest, ProductResponse } from "@/types/product";
+import type { PageResponse } from "@/types/common";
 
 export const productService = {
     // GET single product
     getProduct(productId: number) {
-        return axiosClient.get<CreateProductResponse>(`/products/${productId}`);
+        return axiosClient.get<ProductResponse>(`/products/${productId}`);
     },
 
     // GET list products với pagination
@@ -29,13 +30,36 @@ export const productService = {
         return axiosClient.put<CreateProductResponse>(`/products/${productId}`, data);
     },
 
-    // DELETE product
+    // PATCH delete product (soft delete - set isActive=false)
     deleteProduct(productId: number) {
-        return axiosClient.delete(`/products/${productId}`);
+        return axiosClient.patch(`/products/${productId}`);
+    },
+
+    // PATCH restore product (set isActive=true)
+    restoreProduct(productId: number) {
+        return axiosClient.patch(`/products/${productId}/restore`);
     },
 
     // GET categories
     getCategories() {
         return axiosClient.get<any>('/categories');
+    },
+
+    // ADMIN: Search products with filters and pagination
+    searchProductsAdmin(request: ProductSearchRequest, page: number = 1, size: number = 10) {
+        return axiosClient.get<PageResponse<ProductResponse>>('/products/admin/search', {
+            params: {
+                ...request,
+                page,
+                size
+            }
+        });
+    },
+
+    // ADMIN: Verify (approve/reject) product
+    verifyProduct(productId: number, isApproved: boolean) {
+        return axiosClient.patch<string>(`/products/admin/${productId}/verify`, null, {
+            params: { isApproved }
+        });
     }
 };

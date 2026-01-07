@@ -116,7 +116,7 @@ const PaymentResult = () => {
                             {isSuccess ? (
                                 <>
                                     <Button
-                                        onClick={() => navigate('/user')}
+                                        onClick={() => navigate('/seller/dashboard')}
                                         className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3"
                                     >
                                         <FileText className="w-4 h-4 mr-2" />

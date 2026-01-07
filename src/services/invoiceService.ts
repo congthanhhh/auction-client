@@ -1,7 +1,7 @@
 // src/services/invoiceService.ts
 
 import axiosClient from "@/lib/axios";
-import type { InvoiceResponse, InvoiceStatus, ShipInvoiceRequest, MessageResponse, DisputeRequest, DisputeResponse } from "@/types/invoice";
+import type { InvoiceResponse, InvoiceStatus, ShipInvoiceRequest, MessageResponse, DisputeRequest, DisputeResponse, DisputeSearchRequest, ResolveDisputeRequest } from "@/types/invoice";
 import type { PageResponse } from "@/types/common";
 
 export const invoiceService = {
@@ -15,6 +15,10 @@ export const invoiceService = {
     // GET /invoices/{id} - Get invoice detail by ID
     getInvoiceById(id: number) {
         return axiosClient.get<InvoiceResponse>(`/invoices/${id}`);
+    },
+
+    getInvoiceByIdForAdmin(id: number) {
+        return axiosClient.get<InvoiceResponse>(`/invoices/admin/invoice/${id}`);
     },
 
     // GET /invoices/my-sales - Get seller's AUCTION_SALE invoices (đơn bán hàng)
@@ -66,6 +70,38 @@ export const invoiceService = {
     // GET /invoices/seller-stats - Get seller statistics (tổng phiên đấu giá & doanh thu)
     getSellerStats() {
         return axiosClient.get<SellerRevenueResponse>('/invoices/seller-stats');
+    },
+
+    // ADMIN: GET /invoices/admin/disputes - Get all disputes with filters and pagination
+    getAllDisputes(request: DisputeSearchRequest, page: number = 1, size: number = 10) {
+        return axiosClient.get<PageResponse<DisputeResponse>>('/invoices/admin/disputes', {
+            params: {
+                ...request,
+                page,
+                size
+            }
+        });
+    },
+
+    // ADMIN: POST /invoices/admin/disputes/{disputeId}/resolve - Resolve dispute
+    resolveDispute(disputeId: number, request: ResolveDisputeRequest) {
+        return axiosClient.post<MessageResponse>(`/invoices/admin/disputes/${disputeId}/resolve`, request);
+    },
+
+    // ADMIN: GET /invoices/admin/search - Get all invoices for admin with filters
+    getAllInvoicesForAdmin(request: import('@/types/invoice').InvoiceAdminSearchRequest, page: number = 1, size: number = 10) {
+        return axiosClient.get<PageResponse<InvoiceResponse>>('/invoices/admin/search', {
+            params: {
+                ...request,
+                page,
+                size
+            }
+        });
+    },
+
+    // ADMIN: PUT /invoices/admin/update/{invoiceId} - Update invoice for admin
+    updateInvoiceForAdmin(invoiceId: number, request: import('@/types/invoice').AdminUpdateInvoiceRequest) {
+        return axiosClient.put<InvoiceResponse>(`/invoices/admin/update/${invoiceId}`, request);
     }
 };
 

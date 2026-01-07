@@ -1,16 +1,18 @@
-import { useState } from 'react';
-import { Settings, Percent, Clock, DollarSign, Mail, Bell, Save } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings, DollarSign, Mail, Bell, Save, RefreshCw, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
+import { systemParameterService } from '@/services/systemParameterService';
+import type { SystemParameter } from '@/types/systemParameter';
+import { SystemConfigKey } from '@/types/systemParameter';
 
 const AdminSettings = () => {
-  const [auctionSettings, setAuctionSettings] = useState({
-    bidIncrement: 5,
-    autoExtendTime: 5,
-    commissionRate: 10,
-    paymentTimeout: 24,
-    minBidAmount: 100000,
-    maxAuctionDuration: 30,
-  });
+  const [settings, setSettings] = useState<SystemParameter[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [editEnabled, setEditEnabled] = useState(false);
+
+  // Editable values
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
 
   const [paymentSettings, setPaymentSettings] = useState({
     enablePayPal: true,
@@ -30,8 +32,48 @@ const AdminSettings = () => {
     notifyShipping: true,
   });
 
-  const handleSaveAuction = () => {
-    toast.success('Đã lưu cài đặt đấu giá!');
+  // Fetch all settings
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const response = await systemParameterService.getAllSettings();
+      setSettings(response.data);
+
+      // Initialize edit values
+      const initialValues: Record<string, string> = {};
+      response.data.forEach((setting) => {
+        initialValues[setting.paramKey] = setting.paramValue;
+      });
+      setEditValues(initialValues);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể tải cài đặt');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  // Update a setting
+  const handleUpdateSetting = async (key: string) => {
+    const value = editValues[key];
+    if (!value) {
+      toast.error('Vui lòng nhập giá trị');
+      return;
+    }
+
+    setUpdating(key);
+    try {
+      await systemParameterService.updateSetting(key, value);
+      toast.success('Đã cập nhật cài đặt thành công');
+      fetchSettings(); // Refresh to get updated values
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể cập nhật cài đặt');
+    } finally {
+      setUpdating(null);
+    }
   };
 
   const handleSavePayment = () => {
@@ -42,6 +84,54 @@ const AdminSettings = () => {
     toast.success('Đã lưu cài đặt thông báo!');
   };
 
+  // Get setting value by key
+  const getSettingValue = (key: string): string => {
+    return editValues[key] || '';
+  };
+
+  // Get setting description by key
+  const getSettingDescription = (key: string): string => {
+    const setting = settings.find((s) => s.paramKey === key);
+    return setting?.description || '';
+  };
+
+  // Get setting display info
+  const getSettingInfo = (key: string): { label: string; unit: string; description: string } => {
+    switch (key) {
+      case SystemConfigKey.LISTING_FEE_PERCENT:
+        return {
+          label: 'Phí đăng sản phẩm',
+          unit: '%',
+          description: 'Phần trăm phí thu khi đăng sản phẩm lên hệ thống',
+        };
+      case SystemConfigKey.INVOICE_PAYMENT_DUE_DAYS:
+        return {
+          label: 'Thời hạn thanh toán hóa đơn',
+          unit: 'ngày',
+          description: 'Số ngày người mua phải thanh toán sau khi thắng đấu giá',
+        };
+      case SystemConfigKey.INVOICE_AUTO_COMPLETED_DAYS:
+        return {
+          label: 'Tự động hoàn thành đơn hàng',
+          unit: 'ngày',
+          description: 'Số ngày tự động chuyển trạng thái đơn hàng sang hoàn thành sau khi giao',
+        };
+      default:
+        return { label: key, unit: '', description: getSettingDescription(key) };
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+          <p className="text-gray-600">Đang tải cài đặt...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -50,118 +140,84 @@ const AdminSettings = () => {
         <p className="text-gray-600 mt-1">Tùy chỉnh các thông số hoạt động của nền tảng</p>
       </div>
 
-      {/* Auction Settings */}
+      {/* System Parameters */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-blue-100 rounded-lg">
-            <Settings size={24} className="text-blue-600" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Settings size={24} className="text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Cài đặt hệ thống</h2>
+              <p className="text-sm text-gray-600">Các thông số cấu hình chính của hệ thống</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Cài đặt đấu giá</h2>
-            <p className="text-sm text-gray-600">Thiết lập quy tắc và thông số đấu giá</p>
-          </div>
+          <button
+            onClick={() => setEditEnabled(!editEnabled)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${editEnabled
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+          >
+            {editEnabled ? (
+              <>
+                <Unlock size={18} />
+                Đang mở khóa
+              </>
+            ) : (
+              <>
+                <Lock size={18} />
+                Đã khóa
+              </>
+            )}
+          </button>
         </div>
 
         <div className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Bid Increment */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <Percent size={16} className="text-blue-600" />
-                Bước giá mặc định (%)
-              </label>
-              <input
-                type="number"
-                value={auctionSettings.bidIncrement}
-                onChange={(e) => setAuctionSettings({ ...auctionSettings, bidIncrement: Number(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">Mỗi lượt bid tăng tối thiểu {auctionSettings.bidIncrement}% giá hiện tại</p>
-            </div>
+          {Object.values(SystemConfigKey).map((key) => {
+            const info = getSettingInfo(key);
+            const value = getSettingValue(key);
+            const isUpdating = updating === key;
 
-            {/* Auto Extend Time */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <Clock size={16} className="text-blue-600" />
-                Thời gian gia hạn tự động (phút)
-              </label>
-              <input
-                type="number"
-                value={auctionSettings.autoExtendTime}
-                onChange={(e) => setAuctionSettings({ ...auctionSettings, autoExtendTime: Number(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">Gia hạn thêm {auctionSettings.autoExtendTime} phút nếu có bid trong {auctionSettings.autoExtendTime} phút cuối</p>
-            </div>
-
-            {/* Commission Rate */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <DollarSign size={16} className="text-blue-600" />
-                Phí hoa hồng (%)
-              </label>
-              <input
-                type="number"
-                value={auctionSettings.commissionRate}
-                onChange={(e) => setAuctionSettings({ ...auctionSettings, commissionRate: Number(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">Nền tảng thu {auctionSettings.commissionRate}% trên mỗi giao dịch thành công</p>
-            </div>
-
-            {/* Payment Timeout */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <Clock size={16} className="text-blue-600" />
-                Thời gian thanh toán tối đa (giờ)
-              </label>
-              <input
-                type="number"
-                value={auctionSettings.paymentTimeout}
-                onChange={(e) => setAuctionSettings({ ...auctionSettings, paymentTimeout: Number(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">Hủy đơn nếu không thanh toán sau {auctionSettings.paymentTimeout}h</p>
-            </div>
-
-            {/* Min Bid Amount */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <DollarSign size={16} className="text-blue-600" />
-                Giá khởi điểm tối thiểu (VNĐ)
-              </label>
-              <input
-                type="number"
-                value={auctionSettings.minBidAmount}
-                onChange={(e) => setAuctionSettings({ ...auctionSettings, minBidAmount: Number(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">Giá khởi điểm tối thiểu: {auctionSettings.minBidAmount.toLocaleString()}đ</p>
-            </div>
-
-            {/* Max Auction Duration */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <Clock size={16} className="text-blue-600" />
-                Thời gian đấu giá tối đa (ngày)
-              </label>
-              <input
-                type="number"
-                value={auctionSettings.maxAuctionDuration}
-                onChange={(e) => setAuctionSettings({ ...auctionSettings, maxAuctionDuration: Number(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">Phiên đấu giá tối đa {auctionSettings.maxAuctionDuration} ngày</p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSaveAuction}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Save size={20} />
-            Lưu cài đặt đấu giá
-          </button>
+            return (
+              <div key={key} className="border-b border-gray-100 pb-6 last:border-0 last:pb-0">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {info.label}
+                  {info.unit && <span className="text-gray-500 ml-1">({info.unit})</span>}
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => setEditValues({ ...editValues, [key]: e.target.value })}
+                    disabled={!editEnabled || isUpdating}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    placeholder="Nhập giá trị..."
+                  />
+                  <button
+                    onClick={() => handleUpdateSetting(key)}
+                    disabled={!editEnabled || isUpdating || !value}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Đang lưu...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Cập nhật
+                      </>
+                    )}
+                  </button>
+                </div>
+                {info.description && (
+                  <p className="text-xs text-gray-500 mt-1">{info.description}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

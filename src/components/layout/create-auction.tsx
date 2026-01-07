@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { auctionService } from '@/services/auctionService';
 import { productService } from '@/services/productService';
+import { getProductStatusBadge } from '@/lib/productUtils';
 import { toast } from 'sonner';
 import type { CreateAuctionSessionRequest } from '@/types/auction';
 import type { CreateProductResponse, Product } from '@/types/product';
@@ -45,6 +46,7 @@ const CreateAuction = () => {
     try {
       setIsLoadingProducts(true);
       const response = await productService.getMyProducts();
+      // Show all products (including WAITING_FOR_APPROVAL)
       setMyProducts(response.data);
     } catch (error: any) {
       console.error('Error fetching products:', error);
@@ -56,6 +58,10 @@ const CreateAuction = () => {
 
   // Handle product selection
   const handleSelectProduct = (selectedProduct: Product) => {
+    if (selectedProduct.status !== 'ACTIVE') {
+      toast.error('Chỉ có thể tạo đấu giá cho sản phẩm đã được phê duyệt');
+      return;
+    }
     setProduct(selectedProduct as CreateProductResponse);
     setShowProductSelector(false);
   };
@@ -230,35 +236,53 @@ const CreateAuction = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      {filteredProducts.map((prod) => (
-                        <div
-                          key={prod.id}
-                          onClick={() => handleSelectProduct(prod)}
-                          className="flex gap-4 p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 cursor-pointer transition-all group"
-                        >
-                          {prod.images && prod.images[0] && (
-                            <img
-                              src={prod.images[0].url}
-                              alt={prod.name}
-                              className="w-24 h-24 object-cover rounded-lg"
-                            />
-                          )}
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-800 group-hover:text-purple-600 mb-1">
-                              {prod.name}
-                            </h3>
-                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{prod.description}</p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium text-purple-600">
-                                Giá khởi điểm: {formatPrice(prod.startPrice)}
-                              </p>
-                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                {prod.category.name}
-                              </span>
+                      {filteredProducts.map((prod) => {
+                        const isDisabled = prod.status !== 'ACTIVE';
+                        const statusBadge = prod.status ? getProductStatusBadge(prod.status) : null;
+
+                        return (
+                          <div
+                            key={prod.id}
+                            onClick={() => !isDisabled && handleSelectProduct(prod)}
+                            className={`flex gap-4 p-4 border-2 rounded-xl transition-all ${isDisabled
+                                ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                                : 'border-gray-200 hover:border-purple-500 hover:bg-purple-50 cursor-pointer group'
+                              }`}
+                          >
+                            {prod.images && prod.images[0] && (
+                              <img
+                                src={prod.images[0].url}
+                                alt={prod.name}
+                                className="w-24 h-24 object-cover rounded-lg"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between mb-1">
+                                <h3 className={`font-semibold ${isDisabled ? 'text-gray-500' : 'text-gray-800 group-hover:text-purple-600'
+                                  }`}>
+                                  {prod.name}
+                                </h3>
+                                {statusBadge && (
+                                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold border ${statusBadge.bgColor
+                                    } ${statusBadge.textColor} ${statusBadge.borderColor} whitespace-nowrap ml-2`}>
+                                    {statusBadge.icon} {statusBadge.label}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{prod.description}</p>
+                              <div className="flex items-center justify-between">
+                                <p className={`text-sm font-medium ${isDisabled ? 'text-gray-500' : 'text-purple-600'
+                                  }`}>
+                                  Giá khởi điểm: {formatPrice(prod.startPrice)}
+                                </p>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                  {prod.category.name}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 

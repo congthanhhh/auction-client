@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -10,31 +10,46 @@ import {
   X,
   LogOut,
   ChevronLeft,
-  FileText,
   AlertTriangle,
   Tag,
-  Shield,
   Settings,
   Activity,
+  Bell,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useNotificationStore } from "@/stores/useNotificationStore";
+import NotificationDropdown from "@/components/pop-up/notification-dropdown";
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
+  const { logout, currentUser } = useAuthStore();
+  const { unreadCount, fetchUnreadCount } = useNotificationStore();
+
+  // Fetch unread count khi component mount và khi user đăng nhập
+  useEffect(() => {
+    if (currentUser) {
+      fetchUnreadCount();
+
+      // Poll unread count mỗi 30 giây
+      const interval = setInterval(() => {
+        fetchUnreadCount();
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [currentUser, fetchUnreadCount]);
 
   const menuItems = [
     { path: "/admin", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/admin/users", icon: Users, label: "Người dùng" },
     { path: "/admin/products", icon: Package, label: "Sản phẩm" },
     { path: "/admin/auctions", icon: Gavel, label: "Phiên đấu giá" },
-    { path: "/admin/orders", icon: ShoppingCart, label: "Đơn hàng" },
-    { path: "/admin/reports", icon: FileText, label: "Báo cáo" },
+    { path: "/admin/invoices", icon: ShoppingCart, label: "Hóa đơn" },
     { path: "/admin/disputes", icon: AlertTriangle, label: "Khiếu nại" },
     { path: "/admin/categories", icon: Tag, label: "Danh mục" },
-    { path: "/admin/verification", icon: Shield, label: "Xác minh" },
     { path: "/admin/settings", icon: Settings, label: "Cài đặt" },
     { path: "/admin/logs", icon: Activity, label: "Nhật ký" },
   ];
@@ -52,9 +67,8 @@ const AdminLayout = () => {
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`${
-          sidebarOpen ? "w-64" : "w-20"
-        } bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-all duration-300 flex flex-col shadow-2xl`}
+        className={`${sidebarOpen ? "w-64" : "w-20"
+          } bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-all duration-300 flex flex-col shadow-2xl`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -80,11 +94,10 @@ const AdminLayout = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                  isActive
-                    ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg"
-                    : "hover:bg-gray-700 text-gray-300 hover:text-white"
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive
+                  ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg"
+                  : "hover:bg-gray-700 text-gray-300 hover:text-white"
+                  }`}
               >
                 <Icon size={20} />
                 {sidebarOpen && <span className="font-medium">{item.label}</span>}
@@ -122,6 +135,27 @@ const AdminLayout = () => {
                 "Dashboard"}
             </h2>
             <div className="flex items-center gap-4">
+              {/* Notification Bell */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                  className="flex items-center space-x-2 hover:bg-gray-100 transition-colors px-3 py-2 rounded-lg"
+                >
+                  <div className="relative">
+                    <Bell className="w-5 h-5 text-gray-700" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </button>
+                <NotificationDropdown
+                  isOpen={showNotificationDropdown}
+                  onClose={() => setShowNotificationDropdown(false)}
+                />
+              </div>
+
               <div className="text-right">
                 <p className="text-sm text-gray-600">Xin chào,</p>
                 <p className="font-semibold text-gray-800">Admin</p>

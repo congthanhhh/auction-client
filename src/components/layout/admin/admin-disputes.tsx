@@ -1,357 +1,473 @@
-import { useState } from 'react';
-import { AlertTriangle, MessageSquare, CheckCircle, XCircle, Eye, Image as ImageIcon } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { AlertTriangle, CheckCircle, XCircle, Clock } from "lucide-react";
+import { toast } from "sonner";
+import { invoiceService } from "@/services/invoiceService";
+import type { DisputeResponse, DisputeDecision, DisputeSearchRequest, ResolveDisputeRequest, InvoiceResponse } from "@/types/invoice";
+import Pagination from "@/components/ui/pagination";
 
-interface Dispute {
-  id: number;
-  orderId: string;
-  complainant: string;
-  respondent: string;
-  productName: string;
-  reason: string;
-  description: string;
-  status: 'pending' | 'investigating' | 'resolved';
-  priority: 'low' | 'medium' | 'high';
-  createdAt: string;
-  images: string[];
+interface DisputeWithInvoice {
+    dispute: DisputeResponse;
+    invoice: InvoiceResponse | null;
+    loadingInvoice: boolean;
 }
 
-const MOCK_DISPUTES: Dispute[] = [
-  {
-    id: 1,
-    orderId: 'ORD-2024-5678',
-    complainant: 'Nguyễn Văn A',
-    respondent: 'Trần Thị B',
-    productName: 'iPhone 15 Pro Max 256GB',
-    reason: 'Sản phẩm không đúng mô tả',
-    description: 'Sản phẩm nhận được có vết xước lớn ở mặt sau, trong khi mô tả ghi là mới 100%. Yêu cầu hoàn tiền.',
-    status: 'pending',
-    priority: 'high',
-    createdAt: '2024-12-20T10:30:00Z',
-    images: ['https://via.placeholder.com/400x300', 'https://via.placeholder.com/400x300'],
-  },
-  {
-    id: 2,
-    orderId: 'ORD-2024-5679',
-    complainant: 'Lê Văn C',
-    respondent: 'Phạm Thị D',
-    productName: 'MacBook Pro M3',
-    reason: 'Giao hàng chậm trễ',
-    description: 'Đã quá 7 ngày kể từ khi thanh toán nhưng vẫn chưa nhận được hàng. Người bán không phản hồi.',
-    status: 'investigating',
-    priority: 'medium',
-    createdAt: '2024-12-19T14:20:00Z',
-    images: [],
-  },
-  {
-    id: 3,
-    orderId: 'ORD-2024-5680',
-    complainant: 'Vũ Thị E',
-    respondent: 'Hoàng Văn F',
-    productName: 'Sony A7 IV Camera',
-    reason: 'Sản phẩm bị lỗi',
-    description: 'Máy ảnh không lấy nét được, có vẻ bị lỗi phần cứng. Yêu cầu đổi sản phẩm hoặc hoàn tiền.',
-    status: 'resolved',
-    priority: 'high',
-    createdAt: '2024-12-18T09:15:00Z',
-    images: ['https://via.placeholder.com/400x300'],
-  },
-];
-
 const AdminDisputes = () => {
-  const [disputes] = useState<Dispute[]>(MOCK_DISPUTES);
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'pending' | 'investigating' | 'resolved'>('all');
-  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
+    const [filterDecision, setFilterDecision] = useState<DisputeDecision | undefined>(undefined);
+    const [sortOrder, setSortOrder] = useState<string>("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(10);
 
-  const filteredDisputes = selectedStatus === 'all'
-    ? disputes
-    : disputes.filter(d => d.status === selectedStatus);
+    const [disputes, setDisputes] = useState<DisputeWithInvoice[]>([]);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [loading, setLoading] = useState(false);
 
-  const handleResolve = (disputeId: number, action: 'approve' | 'reject') => {
-    if (action === 'approve') {
-      toast.success('Đã chấp nhận khiếu nại và hoàn tiền cho người mua');
-    } else {
-      toast.success('Đã từ chối khiếu nại');
-    }
-    setSelectedDispute(null);
-  };
+    // Resolve form states for each dispute
+    const [resolveForms, setResolveForms] = useState<Record<number, ResolveDisputeRequest>>({});
+    const [submittingDisputes, setSubmittingDisputes] = useState<Set<number>>(new Set());
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'investigating':
-        return 'bg-blue-100 text-blue-700';
-      case 'resolved':
-        return 'bg-green-100 text-green-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
+    // Fetch disputes
+    const fetchDisputes = async () => {
+        setLoading(true);
+        try {
+            const request: DisputeSearchRequest = {
+                decision: filterDecision,
+                sort: sortOrder || undefined,
+            };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-700';
-      case 'medium':
-        return 'bg-orange-100 text-orange-700';
-      case 'low':
-        return 'bg-green-100 text-green-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
+            const response = await invoiceService.getAllDisputes(request, currentPage, pageSize);
+            const disputesData = response.data.data;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+            // Initialize with disputes and null invoices
+            const disputesWithInvoices: DisputeWithInvoice[] = disputesData.map((dispute) => ({
+                dispute,
+                invoice: null,
+                loadingInvoice: true,
+            }));
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Quản lý khiếu nại</h1>
-        <p className="text-gray-600 mt-1">Xử lý tranh chấp giữa người mua và người bán</p>
-      </div>
+            setDisputes(disputesWithInvoices);
+            setTotalPages(response.data.totalPages);
+            setTotalElements(response.data.totalElements);
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4">
-          <div className="flex items-center justify-between">
+            // Initialize resolve forms for PENDING disputes
+            const initialForms: Record<number, ResolveDisputeRequest> = {};
+            disputesData.forEach((dispute) => {
+                if (dispute.decision === "PENDING") {
+                    initialForms[dispute.id] = {
+                        decision: "REFUND_TO_BUYER",
+                        adminNote: "",
+                    };
+                }
+            });
+            setResolveForms(initialForms);
+
+            // Fetch invoice details for each dispute
+            disputesData.forEach(async (dispute, index) => {
+                try {
+                    const invoiceResponse = await invoiceService.getInvoiceByIdForAdmin(dispute.invoiceId);
+                    setDisputes((prev) => {
+                        const updated = [...prev];
+                        if (updated[index]) {
+                            updated[index] = {
+                                ...updated[index],
+                                invoice: invoiceResponse.data,
+                                loadingInvoice: false,
+                            };
+                        }
+                        return updated;
+                    });
+                } catch (error) {
+                    console.error(`Failed to fetch invoice ${dispute.invoiceId}:`, error);
+                    setDisputes((prev) => {
+                        const updated = [...prev];
+                        if (updated[index]) {
+                            updated[index] = {
+                                ...updated[index],
+                                loadingInvoice: false,
+                            };
+                        }
+                        return updated;
+                    });
+                }
+            });
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Không thể tải danh sách khiếu nại");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchDisputes();
+    }, [currentPage, pageSize, filterDecision, sortOrder]);
+
+    const handleResolveDispute = async (disputeId: number) => {
+        const form = resolveForms[disputeId];
+        if (!form) return;
+
+        setSubmittingDisputes((prev) => new Set(prev).add(disputeId));
+        try {
+            await invoiceService.resolveDispute(disputeId, form);
+            toast.success(
+                form.decision === "REFUND_TO_BUYER"
+                    ? "Đã chấp nhận khiếu nại và hoàn tiền cho người mua"
+                    : "Đã từ chối khiếu nại và chuyển tiền cho người bán"
+            );
+            fetchDisputes();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Không thể giải quyết khiếu nại");
+        } finally {
+            setSubmittingDisputes((prev) => {
+                const updated = new Set(prev);
+                updated.delete(disputeId);
+                return updated;
+            });
+        }
+    };
+
+    const updateResolveForm = (disputeId: number, field: keyof ResolveDisputeRequest, value: any) => {
+        setResolveForms((prev) => ({
+            ...prev,
+            [disputeId]: {
+                ...prev[disputeId],
+                [field]: value,
+            },
+        }));
+    };
+
+    const getDecisionBadge = (decision: DisputeDecision) => {
+        const badges = {
+            PENDING: { bg: "bg-yellow-100", text: "text-yellow-800", label: "Chờ xử lý", icon: Clock },
+            REFUND_TO_BUYER: { bg: "bg-green-100", text: "text-green-800", label: "Phán quyết người mua thắng", icon: CheckCircle },
+            RELEASE_TO_SELLER: { bg: "bg-blue-100", text: "text-blue-800", label: "Phán quyết người bán thắng", icon: XCircle },
+        };
+        const badge = badges[decision];
+        const Icon = badge.icon;
+        return (
+            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}>
+                <Icon size={14} />
+                {badge.label}
+            </span>
+        );
+    };
+
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat("vi-VN", {
+            style: "currency",
+            currency: "VND",
+        }).format(price);
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Header */}
             <div>
-              <p className="text-sm text-yellow-700">Chờ xử lý</p>
-              <p className="text-2xl font-bold text-yellow-900">
-                {disputes.filter(d => d.status === 'pending').length}
-              </p>
+                <h1 className="text-3xl font-bold text-gray-900">Quản lý khiếu nại</h1>
+                <p className="text-gray-600 mt-1">Xử lý tranh chấp giữa người mua và người bán</p>
             </div>
-            <AlertTriangle className="text-yellow-500" size={32} />
-          </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-yellow-700">Chờ xử lý</p>
+                            <p className="text-2xl font-bold text-yellow-900">
+                                {disputes.filter((d) => d.dispute.decision === "PENDING").length}
+                            </p>
+                        </div>
+                        <Clock className="text-yellow-500" size={32} />
+                    </div>
+                </div>
+
+                <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-green-700">Hoàn tiền</p>
+                            <p className="text-2xl font-bold text-green-900">
+                                {disputes.filter((d) => d.dispute.decision === "REFUND_TO_BUYER").length}
+                            </p>
+                        </div>
+                        <CheckCircle className="text-green-500" size={32} />
+                    </div>
+                </div>
+
+                <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-blue-700">Chuyển người bán</p>
+                            <p className="text-2xl font-bold text-blue-900">
+                                {disputes.filter((d) => d.dispute.decision === "RELEASE_TO_SELLER").length}
+                            </p>
+                        </div>
+                        <XCircle className="text-blue-500" size={32} />
+                    </div>
+                </div>
+
+                <div className="bg-gray-50 border-l-4 border-gray-500 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-gray-700">Tổng khiếu nại</p>
+                            <p className="text-2xl font-bold text-gray-900">{totalElements}</p>
+                        </div>
+                        <AlertTriangle className="text-gray-500" size={32} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex gap-3 flex-wrap items-center">
+                    <select
+                        value={filterDecision || "all"}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            setFilterDecision(value === "all" ? undefined : (value as DisputeDecision));
+                            setCurrentPage(1);
+                        }}
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
+                    >
+                        <option value="all">Tất cả quyết định</option>
+                        <option value="PENDING">Chờ xử lý</option>
+                        <option value="RESOLVED">Đã giải quyết</option>
+                    </select>
+
+                    <select
+                        value={sortOrder}
+                        onChange={(e) => {
+                            setSortOrder(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
+                    >
+                        <option value="">Mới nhất (mặc định)</option>
+                        <option value="oldest">Cũ nhất</option>
+                        <option value="resolved_newest">Đã giải quyết mới nhất</option>
+                        <option value="resolved_oldest">Đã giải quyết cũ nhất</option>
+                    </select>
+                </div>
+            </div>
+
+            {/* Disputes List */}
+            <div className="space-y-4">
+                {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto"></div>
+                            <p className="mt-4 text-gray-600">Đang tải...</p>
+                        </div>
+                    </div>
+                ) : disputes.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-xl shadow-lg">
+                        <AlertTriangle className="mx-auto text-gray-400" size={48} />
+                        <p className="text-gray-500 mt-4">Không tìm thấy khiếu nại nào</p>
+                    </div>
+                ) : (
+                    disputes.map(({ dispute, invoice, loadingInvoice }) => (
+                        <div key={dispute.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+                                {/* Left: Dispute Info */}
+                                <div className="space-y-4">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-900">Khiếu nại #{dispute.id}</h3>
+                                            <p className="text-sm text-gray-500">Invoice ID: #{dispute.invoiceId}</p>
+                                        </div>
+                                        {getDecisionBadge(dispute.decision)}
+                                    </div>
+
+                                    {/* Invoice Info */}
+                                    {loadingInvoice ? (
+                                        <div className="bg-gray-50 p-4 rounded-lg">
+                                            <p className="text-sm text-gray-600">Đang tải thông tin invoice...</p>
+                                        </div>
+                                    ) : invoice ? (
+                                        <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                                            <div>
+                                                <p className="text-xs text-gray-600">Sản phẩm</p>
+                                                <p className="font-semibold text-gray-900">{invoice.product.name}</p>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <p className="text-xs text-gray-600">Người mua</p>
+                                                    <p className="font-semibold text-gray-900">
+                                                        {invoice.user.firstName} {invoice.user.lastName}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">{invoice.user.email}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-600">Người bán</p>
+                                                    <p className="font-semibold text-gray-900">
+                                                        {invoice.product.seller.firstName} {invoice.product.seller.lastName}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">{invoice.product.seller.email}</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-600">Giá trị đơn hàng</p>
+                                                <p className="text-lg font-bold text-green-600">{formatPrice(invoice.finalPrice)}</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-red-50 p-4 rounded-lg">
+                                            <p className="text-sm text-red-600">Không thể tải thông tin invoice</p>
+                                        </div>
+                                    )}
+
+                                    {/* Dispute Details */}
+                                    <div className="border-t pt-4">
+                                        <div className="space-y-3">
+                                            <div>
+                                                <p className="text-sm text-gray-600 mb-1">Lý do khiếu nại:</p>
+                                                <p className="text-gray-900 bg-red-50 p-3 rounded-lg border-l-4 border-red-500">
+                                                    {dispute.reason}
+                                                </p>
+                                            </div>
+                                            {dispute.adminNote && (
+                                                <div>
+                                                    <p className="text-sm text-gray-600 mb-1">Ghi chú admin:</p>
+                                                    <p className="text-gray-900 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                                                        {dispute.adminNote}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                                <div>
+                                                    <p className="text-gray-600">Ngày tạo:</p>
+                                                    <p className="font-semibold text-gray-900">{formatDate(dispute.createdAt)}</p>
+                                                </div>
+                                                {dispute.resolvedAt && (
+                                                    <div>
+                                                        <p className="text-gray-600">Ngày giải quyết:</p>
+                                                        <p className="font-semibold text-gray-900">{formatDate(dispute.resolvedAt)}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right: Resolve Form (only for PENDING) */}
+                                {dispute.decision === "PENDING" && resolveForms[dispute.id] && (
+                                    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-lg border-2 border-yellow-300">
+                                        <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                            <AlertTriangle className="text-yellow-600" size={20} />
+                                            Giải quyết khiếu nại
+                                        </h4>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Quyết định <span className="text-red-500">*</span>
+                                                </label>
+                                                <select
+                                                    value={resolveForms[dispute.id].decision}
+                                                    onChange={(e) =>
+                                                        updateResolveForm(dispute.id, "decision", e.target.value as DisputeDecision)
+                                                    }
+                                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white"
+                                                >
+                                                    <option value="REFUND_TO_BUYER">Người mua thắng</option>
+                                                    <option value="RELEASE_TO_SELLER">Người bán thắng</option>
+                                                </select>
+                                                <p className="text-xs text-gray-600 mt-1">
+                                                    {resolveForms[dispute.id].decision === "REFUND_TO_BUYER"
+                                                        ? "Người mua sẽ nhận lại tiền, người bán không nhận được thanh toán"
+                                                        : "Người bán sẽ nhận tiền, khiếu nại bị từ chối"}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Ghi chú admin (Tùy chọn)
+                                                </label>
+                                                <textarea
+                                                    value={resolveForms[dispute.id].adminNote || ""}
+                                                    onChange={(e) => updateResolveForm(dispute.id, "adminNote", e.target.value)}
+                                                    rows={4}
+                                                    placeholder="Nhập ghi chú về quyết định của bạn..."
+                                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none resize-none"
+                                                />
+                                            </div>
+
+                                            <button
+                                                onClick={() => handleResolveDispute(dispute.id)}
+                                                disabled={submittingDisputes.has(dispute.id)}
+                                                className="w-full py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-semibold rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                            >
+                                                {submittingDisputes.has(dispute.id) ? (
+                                                    <>
+                                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                                        Đang xử lý...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <CheckCircle size={20} />
+                                                        Xác nhận giải quyết
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Right: Resolved Info (for resolved disputes) */}
+                                {dispute.decision !== "PENDING" && (
+                                    <div className="bg-gray-50 p-6 rounded-lg border-2 border-gray-200 flex items-center justify-center">
+                                        <div className="text-center">
+                                            {dispute.decision === "REFUND_TO_BUYER" ? (
+                                                <CheckCircle className="mx-auto text-green-600 mb-3" size={48} />
+                                            ) : (
+                                                <XCircle className="mx-auto text-blue-600 mb-3" size={48} />
+                                            )}
+                                            <h4 className="text-lg font-bold text-gray-900 mb-2">Đã giải quyết</h4>
+                                            <p className="text-gray-600">
+                                                {dispute.decision === "REFUND_TO_BUYER"
+                                                    ? "Đã hoàn tiền cho người mua"
+                                                    : "Đã chuyển tiền cho người bán"}
+                                            </p>
+                                            {dispute.resolvedAt && (
+                                                <p className="text-sm text-gray-500 mt-2">{formatDate(dispute.resolvedAt)}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Pagination */}
+            {!loading && disputes.length > 0 && totalPages > 1 && (
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-600">
+                            Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalElements)} /{" "}
+                            {totalElements} khiếu nại
+                        </p>
+
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={pageSize}
+                            totalItems={totalElements}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
-
-        <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-blue-700">Đang điều tra</p>
-              <p className="text-2xl font-bold text-blue-900">
-                {disputes.filter(d => d.status === 'investigating').length}
-              </p>
-            </div>
-            <MessageSquare className="text-blue-500" size={32} />
-          </div>
-        </div>
-
-        <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-green-700">Đã giải quyết</p>
-              <p className="text-2xl font-bold text-green-900">
-                {disputes.filter(d => d.status === 'resolved').length}
-              </p>
-            </div>
-            <CheckCircle className="text-green-500" size={32} />
-          </div>
-        </div>
-
-        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-red-700">Ưu tiên cao</p>
-              <p className="text-2xl font-bold text-red-900">
-                {disputes.filter(d => d.priority === 'high').length}
-              </p>
-            </div>
-            <AlertTriangle className="text-red-500" size={32} />
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-3">
-        {['all', 'pending', 'investigating', 'resolved'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setSelectedStatus(status as any)}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              selectedStatus === status
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            {status === 'all' ? 'Tất cả' :
-             status === 'pending' ? 'Chờ xử lý' :
-             status === 'investigating' ? 'Đang điều tra' :
-             'Đã giải quyết'}
-          </button>
-        ))}
-      </div>
-
-      {/* Disputes List */}
-      <div className="space-y-4">
-        {filteredDisputes.map((dispute) => (
-          <div key={dispute.id} className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-bold text-gray-900">#{dispute.orderId}</h3>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(dispute.status)}`}>
-                    {dispute.status === 'pending' ? 'Chờ xử lý' :
-                     dispute.status === 'investigating' ? 'Đang điều tra' :
-                     'Đã giải quyết'}
-                  </span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPriorityColor(dispute.priority)}`}>
-                    {dispute.priority === 'high' ? 'Ưu tiên cao' :
-                     dispute.priority === 'medium' ? 'Trung bình' :
-                     'Thấp'}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Khiếu nại bởi <span className="font-semibold">{dispute.complainant}</span> về <span className="font-semibold">{dispute.respondent}</span>
-                </p>
-                <p className="text-sm text-gray-500 mt-1">{formatDate(dispute.createdAt)}</p>
-              </div>
-              <button
-                onClick={() => setSelectedDispute(dispute)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Eye size={18} />
-                Xem chi tiết
-              </button>
-            </div>
-
-            <div className="border-t pt-4">
-              <div className="grid grid-cols-2 gap-4 mb-3">
-                <div>
-                  <p className="text-sm text-gray-600">Sản phẩm</p>
-                  <p className="font-semibold">{dispute.productName}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Lý do</p>
-                  <p className="font-semibold text-red-600">{dispute.reason}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Mô tả</p>
-                <p className="text-gray-900">{dispute.description}</p>
-              </div>
-              {dispute.images.length > 0 && (
-                <div className="mt-3 flex gap-2">
-                  <ImageIcon size={16} className="text-gray-500 mt-1" />
-                  <span className="text-sm text-gray-600">{dispute.images.length} ảnh đính kèm</span>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Detail Modal */}
-      {selectedDispute && (
-        <div
-          className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4"
-          onClick={() => setSelectedDispute(null)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 rounded-t-2xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">Chi tiết khiếu nại</h2>
-                  <p className="text-red-100 text-sm mt-1">#{selectedDispute.orderId}</p>
-                </div>
-                <button
-                  onClick={() => setSelectedDispute(null)}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                >
-                  <XCircle size={24} />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-6 space-y-6">
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Người khiếu nại</p>
-                  <p className="font-bold text-gray-900">{selectedDispute.complainant}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Người bị khiếu nại</p>
-                  <p className="font-bold text-gray-900">{selectedDispute.respondent}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Sản phẩm</p>
-                  <p className="font-bold text-gray-900">{selectedDispute.productName}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Thời gian</p>
-                  <p className="font-bold text-gray-900">{formatDate(selectedDispute.createdAt)}</p>
-                </div>
-              </div>
-
-              {/* Reason */}
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-                <p className="text-sm text-red-700 mb-1">Lý do khiếu nại</p>
-                <p className="font-bold text-red-900">{selectedDispute.reason}</p>
-              </div>
-
-              {/* Description */}
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Mô tả chi tiết</p>
-                <p className="text-gray-900 bg-gray-50 p-4 rounded-lg">{selectedDispute.description}</p>
-              </div>
-
-              {/* Images */}
-              {selectedDispute.images.length > 0 && (
-                <div>
-                  <p className="text-sm text-gray-600 mb-3">Hình ảnh bằng chứng</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {selectedDispute.images.map((img, index) => (
-                      <img
-                        key={index}
-                        src={img}
-                        alt={`Evidence ${index + 1}`}
-                        className="w-full h-48 object-cover rounded-lg border"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              {selectedDispute.status !== 'resolved' && (
-                <div className="flex gap-3 pt-4 border-t">
-                  <button
-                    onClick={() => handleResolve(selectedDispute.id, 'approve')}
-                    className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle size={20} />
-                    Chấp nhận khiếu nại
-                  </button>
-                  <button
-                    onClick={() => handleResolve(selectedDispute.id, 'reject')}
-                    className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <XCircle size={20} />
-                    Từ chối khiếu nại
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default AdminDisputes;

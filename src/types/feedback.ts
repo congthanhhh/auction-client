@@ -37,3 +37,33 @@ export interface UserRating {
   neutralCount: number; // Số đánh giá Trung bình (0)
   negativeCount: number; // Số đánh giá Không hài lòng (-1)
 }
+
+// Public feedback DTO (for public profile page)
+export interface FeedbackDto {
+  id: number;
+  fromUsername: string;
+  toUsername: string;
+  rating: FeedbackRating;
+  comment: string;
+  createdAt: string;
+  reviewAs: 'SELLER' | 'BUYER';
+}
+
+export interface FeedbackResponse {
+  id: number;
+  fromUser: {
+    username: string;
+    firstName: string;
+    lastName: string;
+  };
+  toUser: {
+    username: string;
+    firstName: string;
+    lastName: string;
+  };
+  rating: FeedbackRating;
+  comment: string;
+  createdAt: string;
+  invoiceId: number;
+  reviewAs: 'SELLER' | 'BUYER';
+}

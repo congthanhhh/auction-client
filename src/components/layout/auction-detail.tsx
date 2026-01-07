@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { formatJavaDate } from '@/lib/dateUtils';
 import CountdownTimer from './CountdownTimer';
 import Pagination from '@/components/ui/pagination';
+import { auctionService } from '@/services/auctionService';
 
 const AuctionDetail = () => {
   const navigate = useNavigate();
@@ -68,9 +69,22 @@ const AuctionDetail = () => {
     };
   }, [sessionId, fetchAuctionDetail, initializeSocket, leaveSocket]);
 
-  // Gợi ý giá bid tiếp theo
+  // Tính bước giá động dựa trên giá hiện tại (theo logic backend)
+  const calculateBidIncrement = (price: number) => {
+    if (price < 50000) return 5000;
+    if (price < 200000) return 10000;
+    if (price < 500000) return 20000;
+    if (price < 1000000) return 50000;
+    if (price < 5000000) return 100000;
+    if (price < 10000000) return 200000;
+    if (price < 50000000) return 500000;
+    return 1000000;
+  };
+
+  // Gợi ý giá bid tiếp theo dựa trên bước giá động
   useEffect(() => {
-    const minNextBid = currentPrice > 0 ? currentPrice + 100000 : startPrice + 100000;
+    const basePrice = currentPrice > 0 ? currentPrice : startPrice;
+    const minNextBid = basePrice + calculateBidIncrement(basePrice);
     setBidAmount(minNextBid);
   }, [currentPrice, startPrice]);
 
@@ -97,7 +111,10 @@ const AuctionDetail = () => {
   };
 
   const calculateMinBid = () => {
-    return currentPrice > 0 ? currentPrice + 100000 : startPrice + 100000;
+    // Nếu chưa có bid nào, giá tối thiểu = startPrice + bước giá của startPrice
+    // Nếu đã có bid, giá tối thiểu = currentPrice + bước giá của currentPrice
+    const basePrice = currentPrice > 0 ? currentPrice : startPrice;
+    return basePrice + calculateBidIncrement(basePrice);
   };
 
   const handleBidHistoryPageChange = (page: number) => {
@@ -274,21 +291,34 @@ const AuctionDetail = () => {
                 {/* Place Bid Button */}
                 <button
                   onClick={handlePlaceBid}
-                  disabled={!bidAmount || bidAmount < calculateMinBid()}
+                  disabled={!bidAmount || bidAmount < calculateMinBid() || status === 'SCHEDULED'}
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition mb-4"
                 >
-                  🚀 Đặt giá ngay
+                  {status === 'SCHEDULED' ? '⏳ Chưa bắt đầu' : '🚀 Đặt giá ngay'}
                 </button>
 
                 {/* Buy Now Option */}
-                {buyNowPrice && (
+                {buyNowPrice && status === 'ACTIVE' && (
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      if (!isAuthenticated) {
+                        alert("Vui lòng đăng nhập để mua ngay!");
+                        return;
+                      }
+
                       if (window.confirm(`Bạn có muốn mua ngay với giá ${formatCurrency(buyNowPrice)} ₫?`)) {
-                        placeBid(sessionId, buyNowPrice);
+                        try {
+                          const response = await auctionService.buyNow(sessionId);
+                          const invoice = response.data;
+                          // Redirect to invoice page
+                          navigate(`/invoice/${invoice.id}`);
+                        } catch (error: any) {
+                          alert(error.response?.data?.message || "Lỗi khi mua ngay. Vui lòng thử lại.");
+                        }
                       }
                     }}
-                    className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold py-3 rounded-lg transition mb-4"
+                    className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold py-3 rounded-lg transition mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={status !== 'ACTIVE'}
                   >
                     ⚡ Mua ngay {formatCurrency(buyNowPrice)} ₫
                   </button>
@@ -530,11 +560,35 @@ const AuctionDetail = () => {
                 <div className="space-y-4">
                   <h3 className="font-bold text-lg mb-4">Thông tin người bán</h3>
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                    <button
+                      onClick={() => {
+                        const sellerId = product?.seller?.id;
+                        console.log('Seller ID:', sellerId);
+                        console.log('Seller object:', product?.seller);
+                        if (sellerId) {
+                          navigate(`/profile/${sellerId}`);
+                        } else {
+                          alert('Không tìm thấy thông tin người bán');
+                        }
+                      }}
+                      className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl hover:bg-purple-700 transition-colors"
+                    >
                       {product?.seller?.username?.charAt(0).toUpperCase()}
-                    </div>
+                    </button>
                     <div>
-                      <h4 className="font-bold text-lg">{product?.seller?.username}</h4>
+                      <button
+                        onClick={() => {
+                          const sellerId = product?.seller?.id;
+                          if (sellerId) {
+                            navigate(`/profile/${sellerId}`);
+                          } else {
+                            alert('Không tìm thấy thông tin người bán');
+                          }
+                        }}
+                        className="font-bold text-lg text-purple-600 hover:text-purple-700 hover:underline"
+                      >
+                        {product?.seller?.username}
+                      </button>
                       <p className="text-sm text-gray-600">
                         {product?.seller?.firstName} {product?.seller?.lastName}
                       </p>
@@ -636,7 +690,7 @@ const AuctionDetail = () => {
                             currentPage={bidHistoryPage}
                             totalPages={bidHistoryTotalPages}
                             onPageChange={handleBidHistoryPageChange}
-                            itemsPerPage={2}
+                            itemsPerPage={10}
                             totalItems={bidHistoryTotalElements}
                           />
                         </div>

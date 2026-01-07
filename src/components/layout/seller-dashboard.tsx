@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { auctionService } from '@/services/auctionService';
 import { invoiceService, type SellerRevenueResponse } from '@/services/invoiceService';
 import { feedbackService } from '@/services/feedbackService';
+import { getProductStatusBadge } from '@/lib/productUtils';
 import type { AuctionSessionResponse, AuctionStatus } from '@/types/auction';
 import type { InvoiceResponse, InvoiceStatus, DisputeResponse } from '@/types/invoice';
 import type { FeedbackRating } from '@/types/feedback';
@@ -556,14 +557,24 @@ const SellerDashboard = () => {
                                     <h3 className="text-xl font-bold text-gray-800 mb-1">
                                       {auction.product.name}
                                     </h3>
-                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getAuctionStatusColor(auction.status)}`}>
-                                      {translateAuctionStatus(auction.status)}
-                                    </span>
-                                    {!auction.reservePriceMet && auction.status === 'ENDED' && (
-                                      <span className="ml-2 inline-block px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
-                                        Chưa đạt giá sàn
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getAuctionStatusColor(auction.status)}`}>
+                                        {translateAuctionStatus(auction.status)}
                                       </span>
-                                    )}
+                                      {auction.product.status && (() => {
+                                        const statusBadge = getProductStatusBadge(auction.product.status);
+                                        return (
+                                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${statusBadge.bgColor} ${statusBadge.textColor} ${statusBadge.borderColor}`}>
+                                            {statusBadge.icon} {statusBadge.label}
+                                          </span>
+                                        );
+                                      })()}
+                                      {!auction.reservePriceMet && auction.status === 'ENDED' && (
+                                        <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                                          Chưa đạt giá sàn
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                   <button
                                     onClick={() => navigate(`/auction/${auction.id}`)}

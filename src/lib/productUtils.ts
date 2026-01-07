@@ -1,4 +1,5 @@
-import dbData from '../../db.json';
+
+import type { ProductStatus } from '@/types/product';
 
 export interface Product {
   id: string;
@@ -12,26 +13,38 @@ export interface Product {
   startTime?: string;
 }
 
-export const getProductById = (id: string): Product | null => {
-  // Tìm trong activeProducts
-  const activeProduct = dbData.activeProducts.find((p: any) => p.id === id);
-  if (activeProduct) return activeProduct;
-
-  // Tìm trong upcomingProducts
-  const upcomingProduct = dbData.upcomingProducts.find((p: any) => p.id === id);
-  if (upcomingProduct) return upcomingProduct;
-
-  // Tìm trong featuredProducts
-  const featuredProduct = dbData.featuredProducts.find((p: any) => p.id === id);
-  if (featuredProduct) return featuredProduct;
-
-  return null;
+// Get product status badge config
+export const getProductStatusBadge = (status: ProductStatus) => {
+  const configs = {
+    WAITING_FOR_APPROVAL: {
+      label: 'Chờ duyệt',
+      icon: '⏳',
+      bgColor: 'bg-yellow-100',
+      textColor: 'text-yellow-800',
+      borderColor: 'border-yellow-300'
+    },
+    ACTIVE: {
+      label: 'Đã duyệt',
+      icon: '✅',
+      bgColor: 'bg-green-100',
+      textColor: 'text-green-800',
+      borderColor: 'border-green-300'
+    },
+    REJECTED: {
+      label: 'Bị từ chối',
+      icon: '❌',
+      bgColor: 'bg-red-100',
+      textColor: 'text-red-800',
+      borderColor: 'border-red-300'
+    },
+    BANNED: {
+      label: 'Đã bị khóa',
+      icon: '🚫',
+      bgColor: 'bg-gray-100',
+      textColor: 'text-gray-800',
+      borderColor: 'border-gray-300'
+    }
+  };
+  return configs[status];
 };
 
-export const getAllProducts = (): Product[] => {
-  return [
-    ...dbData.activeProducts,
-    ...dbData.upcomingProducts,
-    ...dbData.featuredProducts,
-  ];
-};

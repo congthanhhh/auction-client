@@ -94,3 +94,35 @@ export interface AuctionSessionListResponse {
         number: number;
     };
 }
+
+// Admin types
+export interface AuctionSessionAdminSearchRequest {
+    productName?: string;
+    status?: AuctionStatus;
+    sort?: string; // 'oldest' | 'price_asc' | 'price_desc' | 'start_price_asc' | 'start_price_desc' | 'reserve_price_asc' | 'reserve_price_desc'
+}
+
+export interface AdminAuctionSessionResponse {
+    id: number;
+    startTime: string;
+    endTime: string;
+    startPrice: number;
+    currentPrice: number;
+    reservePrice: number;
+    buyNowPrice: number | null;
+    highestMaxBid: number | null;
+    status: AuctionStatus;
+    product: SimpleProductResponse;
+    highestBidder: SimpleUserResponse | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface AdminUpdateSessionRequest {
+    startTime?: string;
+    endTime?: string;
+    startPrice?: number;
+    reservePrice?: number;
+    buyNowPrice?: number;
+    status?: AuctionStatus;
+}

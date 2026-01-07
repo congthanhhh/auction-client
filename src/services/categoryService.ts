@@ -1,21 +1,27 @@
 import axiosClient from "@/lib/axios";
-
-export interface CategoryResponse {
-    id: number;
-    name: string;
-    description: string;
-}
+import type { CategoryRequest, CategoryResponse } from "@/types/category";
+import type { PageResponse } from "@/types/common";
 
 export const categoryService = {
-    // Get all categories
-    getAllCategories: async (): Promise<CategoryResponse[]> => {
-        const response = await axiosClient.get<CategoryResponse[]>('/categories');
-        return response.data;
+    getAllCategories(page: number = 1, size: number = 10) {
+        return axiosClient.get<PageResponse<CategoryResponse>>('/categories', {
+            params: { page, size }
+        });
     },
 
-    // Get category by ID
-    getCategoryById: async (id: number): Promise<CategoryResponse> => {
-        const response = await axiosClient.get<CategoryResponse>(`/categories/${id}`);
-        return response.data;
+    getCategoryById(categoryId: number) {
+        return axiosClient.get<CategoryResponse>(`/categories/${categoryId}`);
     },
+
+    createCategory(request: CategoryRequest) {
+        return axiosClient.post<CategoryResponse>('/categories', request);
+    },
+
+    updateCategory(categoryId: number, request: CategoryRequest) {
+        return axiosClient.post<CategoryResponse>(`/categories/${categoryId}`, request);
+    },
+
+    deleteCategory(categoryId: number) {
+        return axiosClient.delete<void>(`/categories/${categoryId}`);
+    }
 };

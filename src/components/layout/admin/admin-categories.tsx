@@ -1,111 +1,119 @@
-import { useState } from 'react';
-import { Tag, Plus, Edit, Trash2, Package, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface Category {
-  id: number;
-  name: string;
-  icon: string;
-  productCount: number;
-  isActive: boolean;
-  subCategories: SubCategory[];
-}
-
-interface SubCategory {
-  id: number;
-  name: string;
-  productCount: number;
-}
-
-const MOCK_CATEGORIES: Category[] = [
-  {
-    id: 1,
-    name: 'Điện thoại & Phụ kiện',
-    icon: '📱',
-    productCount: 234,
-    isActive: true,
-    subCategories: [
-      { id: 11, name: 'iPhone', productCount: 89 },
-      { id: 12, name: 'Samsung', productCount: 67 },
-      { id: 13, name: 'Xiaomi', productCount: 45 },
-      { id: 14, name: 'Phụ kiện điện thoại', productCount: 33 },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Laptop & Máy tính',
-    icon: '💻',
-    productCount: 189,
-    isActive: true,
-    subCategories: [
-      { id: 21, name: 'MacBook', productCount: 56 },
-      { id: 22, name: 'Dell', productCount: 43 },
-      { id: 23, name: 'Asus', productCount: 38 },
-      { id: 24, name: 'HP', productCount: 52 },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Camera & Máy ảnh',
-    icon: '📷',
-    productCount: 145,
-    isActive: true,
-    subCategories: [
-      { id: 31, name: 'Canon', productCount: 45 },
-      { id: 32, name: 'Sony', productCount: 52 },
-      { id: 33, name: 'Nikon', productCount: 34 },
-      { id: 34, name: 'Phụ kiện camera', productCount: 14 },
-    ],
-  },
-  {
-    id: 4,
-    name: 'Đồ gia dụng',
-    icon: '🏠',
-    productCount: 98,
-    isActive: true,
-    subCategories: [
-      { id: 41, name: 'Tủ lạnh', productCount: 23 },
-      { id: 42, name: 'Máy giặt', productCount: 31 },
-      { id: 43, name: 'Điều hòa', productCount: 28 },
-      { id: 44, name: 'Khác', productCount: 16 },
-    ],
-  },
-  {
-    id: 5,
-    name: 'Xe cộ & Phương tiện',
-    icon: '🚗',
-    productCount: 67,
-    isActive: false,
-    subCategories: [
-      { id: 51, name: 'Xe máy', productCount: 34 },
-      { id: 52, name: 'Ô tô', productCount: 23 },
-      { id: 53, name: 'Phụ tùng', productCount: 10 },
-    ],
-  },
-];
+import { categoryService } from '@/services/categoryService';
+import type { CategoryRequest, CategoryResponse } from '@/types/category';
+import Pagination from '@/components/ui/pagination';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const AdminCategories = () => {
-  const [categories] = useState<Category[]>(MOCK_CATEGORIES);
-  const [expandedCategory, setExpandedCategory] = useState<number | null>(null);
+  const [categories, setCategories] = useState<CategoryResponse[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const handleToggleExpand = (categoryId: number) => {
-    setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [editingCategory, setEditingCategory] = useState<CategoryResponse | null>(null);
+
+  // Form states
+  const [formData, setFormData] = useState<CategoryRequest>({
+    name: '',
+    description: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  // Fetch categories
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const response = await categoryService.getAllCategories(currentPage, pageSize);
+      setCategories(response.data.data);
+      setTotalPages(response.data.totalPages);
+      setTotalElements(response.data.totalElements);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể tải danh sách danh mục');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddCategory = () => {
-    toast.success('Mở form thêm danh mục mới');
+  useEffect(() => {
+    fetchCategories();
+  }, [currentPage, pageSize]);
+
+  // Open modal for create
+  const handleOpenCreateModal = () => {
+    setModalMode('create');
+    setEditingCategory(null);
+    setFormData({ name: '', description: '' });
+    setIsModalOpen(true);
   };
 
-  const handleEditCategory = (categoryId: number) => {
-    toast.info(`Chỉnh sửa danh mục #${categoryId}`);
+  // Open modal for edit
+  const handleOpenEditModal = (category: CategoryResponse) => {
+    setModalMode('edit');
+    setEditingCategory(category);
+    setFormData({
+      name: category.name,
+      description: category.description
+    });
+    setIsModalOpen(true);
   };
 
-  const handleDeleteCategory = (categoryId: number) => {
-    toast.error(`Đã xóa danh mục #${categoryId}`);
+  // Close modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingCategory(null);
+    setFormData({ name: '', description: '' });
   };
 
-  const handleToggleActive = (categoryId: number) => {
-    toast.success('Đã cập nhật trạng thái danh mục');
+  // Submit form
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name.trim()) {
+      toast.error('Vui lòng nhập tên danh mục');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      if (modalMode === 'create') {
+        await categoryService.createCategory(formData);
+        toast.success('Tạo danh mục thành công');
+      } else if (editingCategory) {
+        await categoryService.updateCategory(editingCategory.id, formData);
+        toast.success('Cập nhật danh mục thành công');
+      }
+      handleCloseModal();
+      fetchCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Delete category
+  const handleDeleteCategory = async (categoryId: number) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa danh mục này?')) return;
+
+    try {
+      await categoryService.deleteCategory(categoryId);
+      toast.success('Xóa danh mục thành công');
+      fetchCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể xóa danh mục');
+    }
   };
 
   return (
@@ -117,7 +125,7 @@ const AdminCategories = () => {
           <p className="text-gray-600 mt-1">Tổ chức và phân loại sản phẩm theo danh mục</p>
         </div>
         <button
-          onClick={handleAddCategory}
+          onClick={handleOpenCreateModal}
           className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition-colors"
         >
           <Plus size={20} />
@@ -126,183 +134,136 @@ const AdminCategories = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-blue-700">Tổng danh mục</p>
-              <p className="text-2xl font-bold text-blue-900">{categories.length}</p>
-            </div>
-            <Tag className="text-blue-500" size={32} />
-          </div>
-        </div>
-
-        <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-green-700">Đang hoạt động</p>
-              <p className="text-2xl font-bold text-green-900">
-                {categories.filter(c => c.isActive).length}
-              </p>
-            </div>
-            <Eye className="text-green-500" size={32} />
-          </div>
-        </div>
-
-        <div className="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-orange-700">Danh mục con</p>
-              <p className="text-2xl font-bold text-orange-900">
-                {categories.reduce((sum, cat) => sum + cat.subCategories.length, 0)}
-              </p>
-            </div>
-            <Tag className="text-orange-500" size={32} />
-          </div>
-        </div>
-
-        <div className="bg-purple-50 border-l-4 border-purple-500 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-purple-700">Tổng sản phẩm</p>
-              <p className="text-2xl font-bold text-purple-900">
-                {categories.reduce((sum, cat) => sum + cat.productCount, 0)}
-              </p>
-            </div>
-            <Package className="text-purple-500" size={32} />
+      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-yellow-700">Tổng số danh mục</p>
+            <p className="text-2xl font-bold text-yellow-900">{totalElements}</p>
           </div>
         </div>
       </div>
 
       {/* Categories List */}
-      <div className="space-y-4">
-        {categories.map((category) => (
-          <div key={category.id} className="bg-white rounded-xl shadow-md overflow-hidden">
-            {/* Category Header */}
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="text-4xl">{category.icon}</div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Đang tải...</p>
+          </div>
+        </div>
+      ) : categories.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-xl shadow-lg">
+          <Plus className="mx-auto text-gray-400" size={48} />
+          <p className="text-gray-500 mt-4">Chưa có danh mục nào</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {categories.map((category) => (
+            <div key={category.id} className="bg-white rounded-xl shadow-md overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-bold text-gray-900">{category.name}</h3>
-                      {category.isActive ? (
-                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full flex items-center gap-1">
-                          <Eye size={12} />
-                          Đang hiển thị
-                        </span>
-                      ) : (
-                        <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full flex items-center gap-1">
-                          <EyeOff size={12} />
-                          Đã ẩn
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <Package size={14} />
-                        {category.productCount} sản phẩm
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Tag size={14} />
-                        {category.subCategories.length} danh mục con
-                      </span>
-                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{category.name}</h3>
+                    <p className="text-gray-600 text-sm">{category.description}</p>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleToggleActive(category.id)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      category.isActive
-                        ? 'text-green-600 hover:bg-green-50'
-                        : 'text-gray-400 hover:bg-gray-50'
-                    }`}
-                    title={category.isActive ? 'Ẩn danh mục' : 'Hiển thị danh mục'}
-                  >
-                    {category.isActive ? <Eye size={20} /> : <EyeOff size={20} />}
-                  </button>
-                  <button
-                    onClick={() => handleToggleExpand(category.id)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Xem danh mục con"
-                  >
-                    <Tag size={20} />
-                  </button>
-                  <button
-                    onClick={() => handleEditCategory(category.id)}
-                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                    title="Chỉnh sửa"
-                  >
-                    <Edit size={20} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCategory(category.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Xóa"
-                  >
-                    <Trash2 size={20} />
-                  </button>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => handleOpenEditModal(category)}
+                      className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                      title="Chỉnh sửa"
+                    >
+                      <Edit size={20} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(category.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Xóa"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            {/* Sub-categories */}
-            {expandedCategory === category.id && (
-              <div className="p-6 bg-gray-50">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-semibold text-gray-900">Danh mục con</h4>
-                  <button
-                    onClick={() => toast.success('Mở form thêm danh mục con')}
-                    className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus size={16} />
-                    Thêm con
-                  </button>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-3">
-                  {category.subCategories.map((subCat) => (
-                    <div
-                      key={subCat.id}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-blue-300 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="font-medium text-gray-900">{subCat.name}</span>
-                        <span className="text-sm text-gray-500">({subCat.productCount})</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => toast.info(`Chỉnh sửa ${subCat.name}`)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => toast.error(`Đã xóa ${subCat.name}`)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* Pagination */}
+      {!loading && categories.length > 0 && totalPages > 1 && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalElements)} / {totalElements} danh mục
+            </p>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={pageSize}
+              totalItems={totalElements}
+            />
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      {/* Add Category Help Text */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <p className="text-sm text-blue-800">
-          💡 <span className="font-semibold">Mẹo:</span> Tổ chức danh mục rõ ràng giúp người dùng dễ dàng tìm kiếm sản phẩm. 
-          Nên có 2-3 cấp danh mục (Cha → Con → Cháu) để tối ưu trải nghiệm.
-        </p>
-      </div>
+      {/* Create/Edit Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">
+              {modalMode === 'create' ? 'Thêm danh mục mới' : 'Chỉnh sửa danh mục'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Tên danh mục <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nhập tên danh mục"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Mô tả
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Nhập mô tả cho danh mục"
+                rows={4}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="flex-1 px-4 py-2.5 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 px-4 py-2.5 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Đang xử lý...' : modalMode === 'create' ? 'Tạo mới' : 'Cập nhật'}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
