@@ -9,6 +9,7 @@ import { paymentService } from '@/services/paymentService';
 import { addressService, type AddressResponse, type AddressRequest } from '@/services/addressService';
 import { userService } from '@/services/userService';
 import { feedbackService } from '@/services/feedbackService';
+import { authService } from '@/services/authService';
 import { useAuthStore } from '@/stores/useAuthStore';
 import type { InvoiceResponse, DisputeResponse } from '@/types/invoice';
 import type { AuctionSessionResponse } from '@/types/auction';
@@ -135,6 +136,22 @@ const UserDetail = () => {
   const [selectedInvoiceForConfirm, setSelectedInvoiceForConfirm] = useState<InvoiceResponse | null>(null);
 
   const [copiedCode, setCopiedCode] = useState('');
+
+  // User info update state
+  const [userInfoForm, setUserInfoForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: ''
+  });
+  const [isUpdatingUserInfo, setIsUpdatingUserInfo] = useState(false);
+
+  // Password creation state
+  const [passwordForm, setPasswordForm] = useState({
+    password: '',
+    confirmPassword: ''
+  });
+  const [isCreatingPassword, setIsCreatingPassword] = useState(false);
 
   // Fetch user profile and total feedback on mount
   useEffect(() => {
@@ -594,6 +611,78 @@ const UserDetail = () => {
     } catch (error: any) {
       console.error('Error deleting address:', error);
       toast.error('Không thể xóa địa chỉ');
+    }
+  };
+
+  // Populate user info form when user data is loaded
+  useEffect(() => {
+    if (user) {
+      setUserInfoForm({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phoneNumber: user.phoneNumber || ''
+      });
+    }
+  }, [user]);
+
+  // Handle user info update
+  const handleUpdateUserInfo = async () => {
+    if (!userInfoForm.firstName.trim() || !userInfoForm.lastName.trim() || !userInfoForm.email.trim()) {
+      toast.error('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    try {
+      setIsUpdatingUserInfo(true);
+      await authService.updateMyInfo(userInfoForm);
+
+      // Refresh full user profile after update
+      const profileRes = await userService.getMyProfile();
+      setUser(profileRes.data);
+
+      toast.success('Cập nhật thông tin thành công!');
+    } catch (error: any) {
+      console.error('Error updating user info:', error);
+      toast.error(error.response?.data?.message || 'Không thể cập nhật thông tin');
+    } finally {
+      setIsUpdatingUserInfo(false);
+    }
+  };
+
+  // Handle password creation
+  const handleCreatePassword = async () => {
+    if (!passwordForm.password.trim()) {
+      toast.error('Vui lòng nhập mật khẩu');
+      return;
+    }
+
+    if (passwordForm.password.length < 8) {
+      toast.error('Mật khẩu phải có ít nhất 8 ký tự');
+      return;
+    }
+
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      toast.error('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    try {
+      setIsCreatingPassword(true);
+      await authService.createPassword({ password: passwordForm.password });
+      toast.success('Tạo mật khẩu thành công! Bạn có thể đăng nhập bằng email và mật khẩu.');
+
+      // Refresh user info to update noPassword status
+      const profileRes = await userService.getMyProfile();
+      setUser(profileRes.data);
+
+      // Reset form
+      setPasswordForm({ password: '', confirmPassword: '' });
+    } catch (error: any) {
+      console.error('Error creating password:', error);
+      toast.error(error.response?.data?.message || 'Không thể tạo mật khẩu');
+    } finally {
+      setIsCreatingPassword(false);
     }
   };
 
@@ -1727,16 +1816,31 @@ const UserDetail = () => {
                       <div>
                         <h3 className="text-lg font-bold text-gray-800 mb-4">Thông tin cá nhân</h3>
                         <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Họ và tên
-                            </label>
-                            <input
-                              type="text"
-                              value={`${user.firstName} ${user.lastName}`}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                              disabled
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Họ
+                              </label>
+                              <input
+                                type="text"
+                                value={userInfoForm.firstName}
+                                onChange={(e) => setUserInfoForm({ ...userInfoForm, firstName: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                placeholder="Nhập họ"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Tên
+                              </label>
+                              <input
+                                type="text"
+                                value={userInfoForm.lastName}
+                                onChange={(e) => setUserInfoForm({ ...userInfoForm, lastName: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                placeholder="Nhập tên"
+                              />
+                            </div>
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1744,9 +1848,10 @@ const UserDetail = () => {
                             </label>
                             <input
                               type="email"
-                              value={user.email}
+                              value={userInfoForm.email}
+                              onChange={(e) => setUserInfoForm({ ...userInfoForm, email: e.target.value })}
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                              disabled
+                              placeholder="Nhập email"
                             />
                           </div>
                           <div>
@@ -1755,12 +1860,25 @@ const UserDetail = () => {
                             </label>
                             <input
                               type="text"
-                              value={user.phoneNumber || ''}
+                              value={userInfoForm.phoneNumber}
+                              onChange={(e) => setUserInfoForm({ ...userInfoForm, phoneNumber: e.target.value })}
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              placeholder="Nhập số điện thoại"
                             />
                           </div>
-                          <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                            Cập nhật thông tin
+                          <button
+                            onClick={handleUpdateUserInfo}
+                            disabled={isUpdatingUserInfo}
+                            className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                          >
+                            {isUpdatingUserInfo ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Đang cập nhật...
+                              </>
+                            ) : (
+                              'Cập nhật thông tin'
+                            )}
                           </button>
                         </div>
                       </div>
@@ -1849,6 +1967,8 @@ const UserDetail = () => {
                                 </label>
                                 <input
                                   type="password"
+                                  value={passwordForm.password}
+                                  onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
                                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                   placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)"
                                 />
@@ -1859,12 +1979,25 @@ const UserDetail = () => {
                                 </label>
                                 <input
                                   type="password"
+                                  value={passwordForm.confirmPassword}
+                                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                   placeholder="Nhập lại mật khẩu mới"
                                 />
                               </div>
-                              <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                                Tạo mật khẩu
+                              <button
+                                onClick={handleCreatePassword}
+                                disabled={isCreatingPassword}
+                                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                              >
+                                {isCreatingPassword ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Đang tạo...
+                                  </>
+                                ) : (
+                                  'Tạo mật khẩu'
+                                )}
                               </button>
                             </div>
                           </>

@@ -31,7 +31,8 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
     email: '',
     password: '',
     firstName: '',
-    lastName: ''
+    lastName: '',
+    phoneNumber: ''
   });
 
   // State cho OTP
@@ -43,7 +44,8 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
       email: '',
       password: '',
       firstName: '',
-      lastName: ''
+      lastName: '',
+      phoneNumber: ''
     });
     setStep(1);
     setOtp('');
@@ -148,6 +150,18 @@ export function RegisterDialog({ isOpen, onClose, onSwitchToLogin }: RegisterDia
                   value={formData.lastName}
                   onChange={handleChange}
                   required
+                  className="w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-purple-400 bg-white transition-all duration-200"
+                />
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <Input
+                  name="phoneNumber"
+                  type="tel"
+                  placeholder="Số điện thoại (tùy chọn)"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
                   className="w-full h-10 sm:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-purple-400 bg-white transition-all duration-200"
                 />
               </div>

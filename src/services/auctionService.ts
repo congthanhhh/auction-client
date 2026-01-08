@@ -83,5 +83,15 @@ export const auctionService = {
     // POST /auction-sessions/{auctionId}/buy-now - Buy now
     buyNow(auctionId: number) {
         return axiosClient.post<import('@/types/invoice').InvoiceResponse>(`/auction-sessions/${auctionId}/buy-now`);
+    },
+
+    // PUT /auction-sessions/{id}/cancel - Cancel auction session (seller only, no bids)
+    cancelSession(sessionId: number) {
+        return axiosClient.put<AuctionSessionResponse>(`/auction-sessions/${sessionId}/cancel`);
+    },
+
+    // PUT /auction-sessions/{id}/reactivate - Reactivate cancelled auction session
+    reactivateSession(sessionId: number) {
+        return axiosClient.put<AuctionSessionResponse>(`/auction-sessions/${sessionId}/reactivate`);
     }
 };

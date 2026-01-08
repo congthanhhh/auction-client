@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent } from '../ui/dialog';
 import { Button } from '../ui/button';
+import { authService } from '@/services/authService';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 interface ForgotPasswordProps {
   isOpen: boolean;
@@ -12,17 +15,30 @@ type ForgotPasswordStep = 'email' | 'otp' | 'newPassword';
 const ForgotPassword: React.FC<ForgotPasswordProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState<ForgotPasswordStep>('email');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      // Chuyển sang bước nhập OTP
+    if (!email) return;
+
+    try {
+      setIsLoading(true);
+      const response = await authService.forgotPassword({ email });
+      toast.success('Thành công!', {
+        description: response.data.message || `Mã OTP đã được gửi đến ${email}`,
+      });
       setStep('otp');
-      console.log('Gửi OTP đến email:', email);
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      toast.error('Gửi OTP thất bại', {
+        description: error.response?.data?.message || 'Vui lòng kiểm tra email và thử lại',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -30,13 +46,13 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ isOpen, onClose }) => {
     // Chỉ cho phép số và 1 ký tự
     if (value.length > 1) return;
     if (value && !/^\d$/.test(value)) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
     // Auto focus next input
-    if (value && index < 4) {
+    if (value && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`) as HTMLInputElement;
       nextInput?.focus();
     }
@@ -52,29 +68,61 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ isOpen, onClose }) => {
   const handleOtpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const otpCode = otp.join('');
-    if (otpCode.length === 5) {
-      console.log('OTP nhập:', otpCode);
+    if (otpCode.length === 6) {
       // Chuyển sang bước đặt mật khẩu mới
       setStep('newPassword');
     }
   };
 
-  const handleNewPasswordSubmit = (e: React.FormEvent) => {
+  const handleNewPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword && confirmPassword && newPassword === confirmPassword) {
-      console.log('Mật khẩu mới đã đặt');
-      // Xử lý đặt mật khẩu mới ở đây
+
+    if (!newPassword || !confirmPassword) {
+      toast.error('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast.error('Mật khẩu phải có ít nhất 8 ký tự');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const otpCode = otp.join('');
+      const response = await authService.resetPassword({
+        email,
+        otp: otpCode,
+        newPassword
+      });
+
+      toast.success('Đặt lại mật khẩu thành công!', {
+        description: response.data.message || 'Bạn có thể đăng nhập với mật khẩu mới',
+      });
       handleClose();
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      toast.error('Đặt lại mật khẩu thất bại', {
+        description: error.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleClose = () => {
     setStep('email');
     setEmail('');
-    setOtp(['', '', '', '', '']);
+    setOtp(['', '', '', '', '', '']);
     setNewPassword('');
     setConfirmPassword('');
     setShowPassword(false);
+    setIsLoading(false);
     onClose();
   };
 
@@ -103,9 +151,16 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ isOpen, onClose }) => {
         <Button
           type="submit"
           className="w-full h-12 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-full font-semibold text-base transition-all duration-200"
-          disabled={!email}
+          disabled={!email || isLoading}
         >
-          Gửi mã OTP
+          {isLoading ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Đang gửi...
+            </>
+          ) : (
+            'Gửi mã OTP'
+          )}
         </Button>
       </form>
     </div>
@@ -194,24 +249,24 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ isOpen, onClose }) => {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <svg 
-                className="w-5 h-5" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
                 {showPassword ? (
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
                     d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
                   />
                 ) : (
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                   />
                 )}
@@ -223,9 +278,16 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ isOpen, onClose }) => {
         <Button
           type="submit"
           className="w-full h-12 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-full font-semibold text-base transition-all duration-200"
-          disabled={!newPassword || !confirmPassword || newPassword !== confirmPassword}
+          disabled={!newPassword || !confirmPassword || newPassword !== confirmPassword || isLoading}
         >
-          Xác nhận
+          {isLoading ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Đang xử lý...
+            </>
+          ) : (
+            'Xác nhận'
+          )}
         </Button>
       </form>
     </div>

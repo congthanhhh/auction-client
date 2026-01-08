@@ -5,6 +5,7 @@ import Header from './header';
 import Footer from './footer';
 import HowToBidModal from '../pop-up/how-to-bid-modal';
 import TermsAndRulesModal from '../pop-up/terms-and-rules-modal';
+import CountdownTimer from './CountdownTimer';
 import {
   Carousel,
   CarouselContent,
@@ -51,55 +52,6 @@ const ScrollToTop = () => {
       <ArrowUp size={20} />
     </button>
   ) : null;
-};
-
-// Countdown Timer Component
-const CountdownTimer = ({ endTime }: { endTime: Date }) => {
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 0,
-    minutes: 0,
-    seconds: 0
-  });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const end = endTime.getTime();
-      const difference = end - now;
-
-      if (difference > 0) {
-        setTimeLeft({
-          hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((difference % (1000 * 60)) / 1000)
-        });
-      } else {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [endTime]);
-
-  return (
-    <div className="bg-gray-100 rounded-lg p-3">
-      <p className="text-xs text-gray-600 mb-2 text-center">THỜI GIAN CÒN LẠI</p>
-      <div className="flex gap-1 text-center">
-        <div className="bg-white rounded px-2 py-1 min-w-[40px]">
-          <div className="text-base font-bold text-gray-900">{String(timeLeft.hours).padStart(2, '0')}</div>
-          <div className="text-xs text-gray-500">hrs</div>
-        </div>
-        <div className="bg-white rounded px-2 py-1 min-w-[40px]">
-          <div className="text-base font-bold text-gray-900">{String(timeLeft.minutes).padStart(2, '0')}</div>
-          <div className="text-xs text-gray-500">min</div>
-        </div>
-        <div className="bg-white rounded px-2 py-1 min-w-[40px]">
-          <div className="text-base font-bold text-gray-900">{String(timeLeft.seconds).padStart(2, '0')}</div>
-          <div className="text-xs text-gray-500">sec</div>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 const Home = () => {
@@ -246,7 +198,6 @@ const Home = () => {
               <CarouselContent className="-ml-2 md:-ml-4">
                 {popularAuctions.map((auction) => {
                   const bidCount = bidCounts[auction.product.id] || 0;
-                  const endTime = new Date(auction.endTime);
 
                   return (
                     <CarouselItem key={auction.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
@@ -268,19 +219,26 @@ const Home = () => {
                           </div>
                         </div>
                         <div className="p-4">
-                          <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 text-base group-hover:text-purple-600 transition-colors">
+                          <h3 className="font-bold text-gray-800 mb-3 line-clamp-2 text-base group-hover:text-purple-600 transition-colors min-h-[3rem]">
                             {auction.product.name}
                           </h3>
-                          <div className="mb-3">
-                            <p className="text-xs text-gray-500 mb-1">Giá hiện tại</p>
-                            <p className="text-2xl font-bold text-purple-600">
-                              {formatCurrency(auction.currentPrice)}
-                            </p>
+
+                          {/* Grid 2 cột cho giá và thời gian */}
+                          <div className="grid grid-cols-2 gap-3 mb-4 pb-3 border-b">
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Giá hiện tại</p>
+                              <p className="text-lg font-bold text-purple-600">
+                                {formatCurrency(auction.currentPrice)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Thời gian còn lại</p>
+                              <div className="font-semibold">
+                                <CountdownTimer targetDate={auction.endTime} />
+                              </div>
+                            </div>
                           </div>
-                          <div className="mb-3 pb-3 border-b">
-                            <p className="text-xs text-gray-500">Thời gian còn lại</p>
-                            <CountdownTimer endTime={endTime} />
-                          </div>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -325,7 +283,6 @@ const Home = () => {
               </div>
             ) : (
               activeAuctions.map((auction) => {
-                const endTime = new Date(auction.endTime);
                 const bidCount = bidCounts[auction.product.id] || 0;
 
                 return (
@@ -351,20 +308,24 @@ const Home = () => {
 
                     {/* Content */}
                     <div className="p-3">
-                      <h3 className="font-bold text-gray-800 mb-2 line-clamp-2 text-sm group-hover:text-purple-600 transition-colors">
+                      <h3 className="font-bold text-gray-800 mb-3 line-clamp-2 text-sm group-hover:text-purple-600 transition-colors min-h-[2.5rem]">
                         {auction.product.name}
                       </h3>
 
-                      <div className="mb-2">
-                        <p className="text-xs text-gray-500 mb-1">Giá hiện tại</p>
-                        <p className="text-lg font-bold text-purple-600">
-                          {formatCurrency(auction.currentPrice)}
-                        </p>
-                      </div>
-
-                      <div className="mb-2 pb-2 border-b">
-                        <p className="text-xs text-gray-500">Thời gian còn lại</p>
-                        <CountdownTimer endTime={endTime} />
+                      {/* Grid 2 cột cho giá và thời gian */}
+                      <div className="grid grid-cols-2 gap-2 mb-3 pb-2 border-b">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Giá hiện tại</p>
+                          <p className="text-base font-bold text-purple-600">
+                            {formatCurrency(auction.currentPrice)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Thời gian còn lại</p>
+                          <div className="font-semibold text-sm">
+                            <CountdownTimer targetDate={auction.endTime} />
+                          </div>
+                        </div>
                       </div>
 
                       <button

@@ -44,6 +44,14 @@ export interface SimpleUserResponse {
     phoneNumber: string;
 }
 
+// Request for updating user information
+export interface UserUpdateRequest {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string;
+}
+
 export interface UserProfileResponse {
     id: string;
     username: string;

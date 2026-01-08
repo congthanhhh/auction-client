@@ -284,7 +284,7 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-              <span className="font-medium text-gray-800">Tổng GMV (Giá trị giao dịch)</span>
+              <span className="font-medium text-gray-800">Tổng GMV (Gross Merchandise Value)</span>
             </div>
             <span className="text-xl font-bold text-blue-600">{formatCurrency(statistics.totalGMV)}</span>
           </div>

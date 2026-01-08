@@ -16,9 +16,10 @@ interface LoginDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSwitchToRegister?: () => void;
+  onSwitchToForgotPassword?: () => void;
 }
 
-export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialogProps) {
+export function LoginDialog({ isOpen, onClose, onSwitchToRegister, onSwitchToForgotPassword }: LoginDialogProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -97,6 +98,20 @@ export function LoginDialog({ isOpen, onClose, onSwitchToRegister }: LoginDialog
                 required
                 className="w-full h-12 px-4 bg-gray-100 border-0 rounded-full text-gray-700 placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 transition-all"
               />
+            </div>
+
+            {/* Forgot Password Link */}
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => {
+                  handleClose();
+                  onSwitchToForgotPassword?.();
+                }}
+                className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors bg-transparent border-none p-0 cursor-pointer"
+              >
+                Quên mật khẩu?
+              </button>
             </div>
           </div>
 

@@ -35,8 +35,37 @@ const SellerDashboard = () => {
   const [feedbackComment, setFeedbackComment] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
+  // Confirm Dialog State
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'danger' | 'warning' | 'info';
+  }>({ title: '', message: '', onConfirm: () => { } });
+
   // Dispute details map (invoiceId -> DisputeResponse)
   const [disputeDetailsMap, setDisputeDetailsMap] = useState<Map<number, DisputeResponse>>(new Map());
+
+  // Helper function to show confirm dialog
+  const showConfirm = (config: {
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'danger' | 'warning' | 'info';
+  }) => {
+    setConfirmConfig(config);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmAction = () => {
+    confirmConfig.onConfirm();
+    setShowConfirmDialog(false);
+  };
 
   // API State - Auctions
   const [auctions, setAuctions] = useState<AuctionSessionResponse[]>([]);
@@ -262,6 +291,56 @@ const SellerDashboard = () => {
     setShowShippingModal(true);
   };
 
+  // Handle cancel auction session
+  const handleCancelSession = async (auction: AuctionSessionResponse) => {
+    showConfirm({
+      title: 'Hủy phiên đấu giá',
+      message: `Bạn có chắc muốn hủy phiên đấu giá "${auction.product.name}"?`,
+      type: 'danger',
+      confirmText: 'Hủy phiên',
+      cancelText: 'Quay lại',
+      onConfirm: async () => {
+        try {
+          const response = await auctionService.cancelSession(auction.id);
+          toast.success('Hủy phiên đấu giá thành công!');
+
+          // Update the auction in the list
+          setAuctions(prevAuctions =>
+            prevAuctions.map(a => a.id === auction.id ? response.data : a)
+          );
+        } catch (error: any) {
+          console.error('Error cancelling session:', error);
+          toast.error(error.response?.data?.message || 'Không thể hủy phiên đấu giá. Phiên có thể đã có người đặt giá.');
+        }
+      }
+    });
+  };
+
+  // Handle reactivate auction session
+  const handleReactivateSession = async (auction: AuctionSessionResponse) => {
+    showConfirm({
+      title: 'Kích hoạt lại phiên đấu giá',
+      message: `Bạn có chắc muốn kích hoạt lại phiên đấu giá "${auction.product.name}"?`,
+      type: 'info',
+      confirmText: 'Kích hoạt',
+      cancelText: 'Hủy',
+      onConfirm: async () => {
+        try {
+          const response = await auctionService.reactivateSession(auction.id);
+          toast.success('Kích hoạt lại phiên đấu giá thành công!');
+
+          // Update the auction in the list
+          setAuctions(prevAuctions =>
+            prevAuctions.map(a => a.id === auction.id ? response.data : a)
+          );
+        } catch (error: any) {
+          console.error('Error reactivating session:', error);
+          toast.error(error.response?.data?.message || 'Không thể kích hoạt lại phiên đấu giá.');
+        }
+      }
+    });
+  };
+
   const handleSubmitTracking = async (trackingCode: string, carrier: string) => {
     if (!selectedOrder) return;
 
@@ -353,16 +432,23 @@ const SellerDashboard = () => {
   };
 
   const handleReportNonPayment = async (invoice: InvoiceResponse) => {
-    if (!confirm(`Báo cáo người mua bùng hàng cho đơn #${invoice.id}?\nNgười mua sẽ nhận strike và đơn hàng sẽ bị hủy.`)) return;
-
-    try {
-      await invoiceService.reportNonPayment(invoice.id);
-      toast.success('Đã báo cáo bùng hàng thành công!');
-      fetchSales();
-    } catch (error: any) {
-      console.error('Error reporting non-payment:', error);
-      toast.error(error.response?.data?.message || 'Không thể báo cáo');
-    }
+    showConfirm({
+      title: 'Báo cáo bùng hàng',
+      message: `Báo cáo người mua bùng hàng cho đơn #${invoice.id}?\n\nNgười mua sẽ nhận strike và đơn hàng sẽ bị hủy.`,
+      type: 'warning',
+      confirmText: 'Báo cáo',
+      cancelText: 'Hủy',
+      onConfirm: async () => {
+        try {
+          await invoiceService.reportNonPayment(invoice.id);
+          toast.success('Đã báo cáo bùng hàng thành công!');
+          fetchSales();
+        } catch (error: any) {
+          console.error('Error reporting non-payment:', error);
+          toast.error(error.response?.data?.message || 'Không thể báo cáo');
+        }
+      }
+    });
   };
 
   return (
@@ -503,7 +589,7 @@ const SellerDashboard = () => {
                     >
                       Tất cả
                     </button>
-                    {(['SCHEDULED', 'ACTIVE', 'ENDED'] as AuctionStatus[]).map((status) => (
+                    {(['SCHEDULED', 'ACTIVE', 'ENDED', 'CANCELLED'] as AuctionStatus[]).map((status) => (
                       <button
                         key={status}
                         onClick={() => {
@@ -576,12 +662,34 @@ const SellerDashboard = () => {
                                       )}
                                     </div>
                                   </div>
-                                  <button
-                                    onClick={() => navigate(`/auction/${auction.id}`)}
-                                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-                                  >
-                                    Chi tiết
-                                  </button>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => navigate(`/auction/${auction.id}`)}
+                                      className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                                    >
+                                      Chi tiết
+                                    </button>
+                                    {/* Cancel button - only show for SCHEDULED or ACTIVE auctions without bids */}
+                                    {(auction.status === 'SCHEDULED' || auction.status === 'ACTIVE') && !auction.highestBidder && (
+                                      <button
+                                        onClick={() => handleCancelSession(auction)}
+                                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-1"
+                                      >
+                                        <X className="w-4 h-4" />
+                                        Hủy
+                                      </button>
+                                    )}
+                                    {/* Reactivate button - only show for CANCELLED auctions */}
+                                    {auction.status === 'CANCELLED' && (
+                                      <button
+                                        onClick={() => handleReactivateSession(auction)}
+                                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
+                                      >
+                                        <CheckCircle className="w-4 h-4" />
+                                        Kích hoạt lại
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
 
                                 {/* Info Grid */}
@@ -1278,6 +1386,57 @@ const SellerDashboard = () => {
                 className="flex-1 px-6 py-2.5 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
               >
                 {isSubmittingFeedback ? 'Đang gửi...' : 'Gửi đánh giá'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}      {/* Custom Confirm Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 animate-in fade-in-0 zoom-in-95 duration-200">
+            <div className="flex items-start gap-4 mb-4">
+              {confirmConfig.type === 'danger' && (
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+              )}
+              {confirmConfig.type === 'warning' && (
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-orange-600" />
+                </div>
+              )}
+              {confirmConfig.type === 'info' && (
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-blue-600" />
+                </div>
+              )}
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  {confirmConfig.title}
+                </h3>
+                <p className="text-gray-600 text-sm whitespace-pre-line">
+                  {confirmConfig.message}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="flex-1 px-6 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                {confirmConfig.cancelText || 'Hủy'}
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                className={`flex-1 px-6 py-2.5 text-white rounded-lg font-medium transition-colors ${confirmConfig.type === 'danger'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : confirmConfig.type === 'warning'
+                    ? 'bg-orange-600 hover:bg-orange-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+              >
+                {confirmConfig.confirmText || 'Xác nhận'}
               </button>
             </div>
           </div>

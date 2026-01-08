@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginDialog from "../pop-up/login";
 import RegisterDialog from "../pop-up/register";
+import ForgotPassword from "../pop-up/forgot-password";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ const Header = () => {
   const [showMobileCategoryDropdown, setShowMobileCategoryDropdown] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [showForgotPasswordDialog, setShowForgotPasswordDialog] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
 
@@ -203,6 +205,18 @@ const Header = () => {
                         <ShoppingCart className="w-4 h-4" />
                         <span>Quản lý bán hàng</span>
                       </button>
+                      {currentUser.roles?.some(role => role.name === 'ADMIN') && (
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 transition-colors flex items-center space-x-2 border-t border-gray-100"
+                          onClick={() => {
+                            navigate('/admin');
+                            setShowUserDropdown(false);
+                          }}
+                        >
+                          <User className="w-4 h-4" />
+                          <span>Quản trị hệ thống</span>
+                        </button>
+                      )}
                       <button
                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2"
                         onClick={() => {
@@ -347,6 +361,11 @@ const Header = () => {
           setShowLoginDialog(false);
           setShowRegisterDialog(true);
         }}
+        onSwitchToForgotPassword={() => {
+          console.log('Header: Switching from Login to Forgot Password'); // Debug log
+          setShowLoginDialog(false);
+          setShowForgotPasswordDialog(true);
+        }}
       />
 
       {/* Register Dialog */}
@@ -358,6 +377,12 @@ const Header = () => {
           setShowRegisterDialog(false);
           setShowLoginDialog(true);
         }}
+      />
+
+      {/* Forgot Password Dialog */}
+      <ForgotPassword
+        isOpen={showForgotPasswordDialog}
+        onClose={() => setShowForgotPasswordDialog(false)}
       />
     </header>
   );

@@ -1,5 +1,5 @@
 import { authService } from '@/services/authService';
-import type { LoginRequest, OtpVerifyRequest, RegisterRequest } from '@/types/auth';
+import type { LoginRequest, OtpVerifyRequest, RegisterRequest, UserCreationRequest } from '@/types/auth';
 import type { UserResponse } from '@/types/user';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -13,7 +13,7 @@ interface AuthState {
 
     // Actions
     login: (data: LoginRequest) => Promise<void>;
-    register: (data: RegisterRequest) => Promise<void>;
+    register: (data: UserCreationRequest) => Promise<void>;
     verifyOtp: (data: OtpVerifyRequest) => Promise<void>;
     fetchCurrentUser: () => Promise<void>;
     logout: () => Promise<void>;
@@ -116,7 +116,7 @@ export const useAuthStore = create<AuthState>()(
             },
 
             // 4. Action Đăng ký (Gửi OTP)
-            register: async (data: RegisterRequest) => {
+            register: async (data: UserCreationRequest) => {
                 set({ isLoading: true, error: null });
                 try {
                     await authService.register(data);
