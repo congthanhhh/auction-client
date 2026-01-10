@@ -159,17 +159,16 @@ const AuctionDetail = () => {
 
                 {/* Main Image */}
                 <div className="relative bg-gray-100 rounded-lg overflow-hidden mb-4" style={{ height: '450px' }}>
-                  {productImages.length > 0 ? (
-                    <img
-                      src={productImages[currentImageIndex]?.url}
-                      alt={product?.name}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      Không có hình ảnh
-                    </div>
-                  )}
+                  <img
+                    src={productImages.length > 0 && productImages[currentImageIndex]?.url
+                      ? productImages[currentImageIndex].url
+                      : 'https://picsum.photos/200'}
+                    alt={product?.name || 'Product image'}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://picsum.photos/200';
+                    }}
+                  />
 
                   {/* Watermark */}
                   <div className="absolute bottom-4 left-4 bg-black/60 text-white text-xs px-2 py-1 rounded">
@@ -192,7 +191,14 @@ const AuctionDetail = () => {
                         className={`flex-shrink-0 w-20 h-20 rounded border-2 overflow-hidden transition ${idx === currentImageIndex ? 'border-purple-600' : 'border-gray-200 hover:border-gray-300'
                           }`}
                       >
-                        <img src={img.url} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={img.url || 'https://picsum.photos/200'}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://picsum.photos/200';
+                          }}
+                        />
                       </button>
                     ))}
                   </div>

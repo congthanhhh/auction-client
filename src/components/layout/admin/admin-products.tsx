@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Search, Eye, CheckCircle, XCircle, Trash2, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { Search, Eye, CheckCircle, XCircle, Trash2, Image as ImageIcon, RefreshCw, Edit, Upload, X, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { productService } from "@/services/productService";
+import { imageService, type Image } from "@/services/imageService";
 import { categoryService } from "@/services/categoryService";
 import type { ProductResponse, ProductSearchRequest, ProductStatus } from "@/types/product";
 import type { CategoryResponse } from "@/types/category";
@@ -33,6 +34,23 @@ const AdminProducts = () => {
   // Image preview modal
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductResponse | null>(null);
+
+  // Edit Product Modal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<ProductResponse | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editImages, setEditImages] = useState<Image[]>([]);
+  const [imagesToRemove, setImagesToRemove] = useState<number[]>([]);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    description: '',
+    startPrice: '',
+    categoryId: '',
+    attributes: [] as { key: string; value: string }[],
+    newAttributeKey: '',
+    newAttributeValue: '',
+  });
 
   // Fetch categories
   useEffect(() => {
@@ -156,6 +174,158 @@ const AdminProducts = () => {
     }
   };
 
+  // Handle open edit modal
+  const handleOpenEditModal = async (product: ProductResponse) => {
+    setProductToEdit(product);
+    setEditImages(product.images ? Array.from(product.images) : []);
+    setImagesToRemove([]);
+
+    // Parse attributes from JSON string to array
+    let attributesArray: { key: string; value: string }[] = [];
+    if (product.attributes) {
+      try {
+        const parsed = JSON.parse(product.attributes);
+        attributesArray = Object.entries(parsed).map(([key, value]) => ({
+          key,
+          value: String(value)
+        }));
+      } catch (e) {
+        console.error('Error parsing attributes:', e);
+      }
+    }
+
+    setEditFormData({
+      name: product.name,
+      description: product.description,
+      startPrice: String(product.startPrice),
+      categoryId: String(product.category.id),
+      attributes: attributesArray,
+      newAttributeKey: '',
+      newAttributeValue: '',
+    });
+    setShowEditModal(true);
+  };
+
+  // Handle image upload for edit
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (editImages.length + files.length > 4) {
+      toast.error('Tối đa 4 ảnh');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const uploadPromises = Array.from(files).map((file) => imageService.uploadImage(file));
+      const uploadedImages = await Promise.all(uploadPromises);
+      setEditImages((prev) => [...prev, ...uploadedImages]);
+      toast.success(`Đã tải lên ${uploadedImages.length} ảnh`);
+    } catch (error: any) {
+      console.error('Error uploading images:', error);
+      toast.error(error.response?.data?.message || 'Upload ảnh thất bại');
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  // Handle remove existing image
+  const handleRemoveExistingImage = (imageId: number) => {
+    setImagesToRemove((prev) => [...prev, imageId]);
+    setEditImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  // Handle add attribute in edit form
+  const handleEditAddAttribute = () => {
+    const { newAttributeKey, newAttributeValue } = editFormData;
+    if (!newAttributeKey.trim() || !newAttributeValue.trim()) {
+      toast.error('Vui lòng điền đầy đủ tên và giá trị thuộc tính');
+      return;
+    }
+
+    setEditFormData((prev) => ({
+      ...prev,
+      attributes: [...prev.attributes, { key: newAttributeKey, value: newAttributeValue }],
+      newAttributeKey: '',
+      newAttributeValue: '',
+    }));
+  };
+
+  // Handle remove attribute in edit form
+  const handleEditRemoveAttribute = (index: number) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      attributes: prev.attributes.filter((_, i) => i !== index),
+    }));
+  };
+
+  // Handle update product
+  const handleUpdateProduct = async () => {
+    if (!productToEdit) return;
+
+    // Validation
+    if (!editFormData.name.trim()) {
+      toast.error('Vui lòng nhập tên sản phẩm');
+      return;
+    }
+
+    if (!editFormData.categoryId) {
+      toast.error('Vui lòng chọn danh mục');
+      return;
+    }
+
+    if (!editFormData.startPrice || Number(editFormData.startPrice) <= 0) {
+      toast.error('Giá khởi điểm phải lớn hơn 0');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      // Convert attributes to JSON object format
+      const attributesObject = editFormData.attributes.reduce((acc, attr) => {
+        acc[attr.key] = attr.value;
+        return acc;
+      }, {} as Record<string, string>);
+
+      const attributesString = editFormData.attributes.length > 0 ? JSON.stringify(attributesObject) : '';
+
+      // Get new image IDs (images that weren't in the original product)
+      const originalImageIds = productToEdit.images ? Array.from(productToEdit.images).map(img => img.id) : [];
+      const newImageIds = editImages
+        .filter(img => !originalImageIds.includes(img.id))
+        .map(img => img.id);
+
+      const updateRequest = {
+        name: editFormData.name,
+        description: editFormData.description,
+        startPrice: Number(editFormData.startPrice),
+        categoryId: Number(editFormData.categoryId),
+        attributes: attributesString,
+        imageIdsToAdd: newImageIds.length > 0 ? newImageIds : undefined,
+        imageIdsToRemove: imagesToRemove.length > 0 ? imagesToRemove : undefined,
+      };
+
+      await productService.updateProductByAdmin(productToEdit.id, updateRequest);
+
+      toast.success('Cập nhật sản phẩm thành công!');
+
+      setShowEditModal(false);
+      setProductToEdit(null);
+      fetchProducts(); // Refresh list
+    } catch (error: any) {
+      console.error('Error updating product:', error);
+      toast.error(error.response?.data?.message || 'Cập nhật sản phẩm thất bại');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const formatNumber = (value: string) => {
+    return value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Actions */}
@@ -232,7 +402,7 @@ const AdminProducts = () => {
               className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
             >
               <option value="newest">Mới nhất</option>
-              <option value="oldest"> Cũ nhất</option>
+              <option value="oldest">Cũ nhất</option>
               <option value="price_desc">Giá cao nhất</option>
               <option value="price_asc">Giá thấp nhất</option>
             </select>
@@ -319,15 +489,6 @@ const AdminProducts = () => {
                   const sellerName = `${product.seller.firstName} ${product.seller.lastName}`;
                   const isDeleted = product.isActive === false;
 
-                  // Debug log
-                  if (product.id) {
-                    console.log(`Product ${product.id} - ${product.name}:`, {
-                      isActive: product.isActive,
-                      isDeleted: isDeleted,
-                      typeof_isActive: typeof product.isActive
-                    });
-                  }
-
                   return (
                     <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${isDeleted ? 'bg-red-50 opacity-75' : ''}`}>
                       <td className="px-6 py-4">
@@ -397,6 +558,13 @@ const AdminProducts = () => {
                             title="Xem chi tiết sản phẩm"
                           >
                             <Eye size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleOpenEditModal(product)}
+                            className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="Chỉnh sửa sản phẩm"
+                          >
+                            <Edit size={18} />
                           </button>
                           {isDeleted ? (
                             <button
@@ -590,6 +758,210 @@ const AdminProducts = () => {
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Đóng
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="!max-w-[1250px] w-[98vw] max-h-[98vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <Edit className="text-orange-600" size={32} />
+              Chỉnh sửa sản phẩm
+            </DialogTitle>
+          </DialogHeader>
+          {productToEdit && (
+            <div className="overflow-y-auto px-6 py-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column */}
+                <div className="space-y-6">
+                  {/* Images */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Hình ảnh sản phẩm (Tối đa 4 ảnh) <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      {editImages.map((image) => (
+                        <div key={image.id} className="relative group">
+                          <img
+                            src={image.url}
+                            alt="Product"
+                            className="w-full h-40 object-cover rounded-lg border-2 border-gray-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveExistingImage(image.id)}
+                            className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <X size={18} />
+                          </button>
+                        </div>
+                      ))}
+                      {editImages.length < 4 && (
+                        <label className="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-colors">
+                          {isUploadingImage ? (
+                            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                          ) : (
+                            <>
+                              <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                              <span className="text-sm text-gray-600">Tải ảnh lên</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleEditImageUpload}
+                            className="hidden"
+                            disabled={isUploadingImage}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Name */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-2">
+                      Tên sản phẩm <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                      className="w-full px-5 py-3.5 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="Nhập tên sản phẩm"
+                    />
+                  </div>
+
+                  {/* Start Price */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-2">
+                      Giá khởi điểm <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formatNumber(editFormData.startPrice)}
+                        onChange={(e) => setEditFormData({ ...editFormData, startPrice: e.target.value.replace(/\D/g, '') })}
+                        className="w-full px-5 py-3.5 pr-14 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="0"
+                      />
+                      <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-base">₫</span>
+                    </div>
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-2">
+                      Danh mục <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={editFormData.categoryId}
+                      onChange={(e) => setEditFormData({ ...editFormData, categoryId: e.target.value })}
+                      className="w-full px-5 py-3.5 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    >
+                      <option value="">Chọn danh mục</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-6">
+                  {/* Description */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-2">
+                      Mô tả
+                    </label>
+                    <textarea
+                      value={editFormData.description}
+                      onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                      rows={10}
+                      className="w-full px-5 py-3.5 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                      placeholder="Mô tả chi tiết sản phẩm"
+                    />
+                  </div>
+
+                  {/* Attributes */}
+                  <div>
+                    <label className="block text-base font-semibold text-gray-700 mb-3">
+                      Thuộc tính sản phẩm
+                    </label>
+                    {editFormData.attributes.length > 0 && (
+                      <div className="space-y-3 mb-4 max-h-[400px] overflow-y-auto pr-2">
+                        {editFormData.attributes.map((attr, index) => (
+                          <div key={index} className="flex gap-3 items-center bg-gray-50 p-4 rounded-lg">
+                            <div className="flex-1 flex gap-3">
+                              <span className="font-semibold text-gray-700 text-base">{attr.key}:</span>
+                              <span className="text-gray-600 text-base">{attr.value}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleEditRemoveAttribute(index)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                            >
+                              <X size={20} />
+                            </button>
+                          </div>
+                        ))}\n                  </div>
+                    )}
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={editFormData.newAttributeKey}
+                        onChange={(e) => setEditFormData({ ...editFormData, newAttributeKey: e.target.value })}
+                        placeholder="Tên thuộc tính"
+                        className="flex-1 px-5 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                      <input
+                        type="text"
+                        value={editFormData.newAttributeValue}
+                        onChange={(e) => setEditFormData({ ...editFormData, newAttributeValue: e.target.value })}
+                        placeholder="Giá trị"
+                        className="flex-1 px-5 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleEditAddAttribute}
+                        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-base font-medium whitespace-nowrap flex-shrink-0"
+                      >
+                        <Plus size={20} />
+                        Thêm
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="px-6 py-4 border-t gap-3 flex-shrink-0">
+            <button
+              onClick={() => setShowEditModal(false)}
+              className="px-8 py-3 text-base font-medium border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={isUpdating}
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleUpdateProduct}
+              className="px-8 py-3 text-base font-semibold bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Đang cập nhật...
+                </>
+              ) : (
+                'Cập nhật sản phẩm'
+              )}
             </button>
           </DialogFooter>
         </DialogContent>

@@ -46,6 +46,18 @@ const SellerDashboard = () => {
     type?: 'danger' | 'warning' | 'info';
   }>({ title: '', message: '', onConfirm: () => { } });
 
+  // Edit Auction Modal State
+  const [showEditAuctionModal, setShowEditAuctionModal] = useState(false);
+  const [selectedAuctionForEdit, setSelectedAuctionForEdit] = useState<AuctionSessionResponse | null>(null);
+  const [isUpdatingAuction, setIsUpdatingAuction] = useState(false);
+  const [editAuctionForm, setEditAuctionForm] = useState({
+    startTime: '',
+    endTime: '',
+    startPrice: 0,
+    reservePrice: 0,
+    buyNowPrice: 0
+  });
+
   // Dispute details map (invoiceId -> DisputeResponse)
   const [disputeDetailsMap, setDisputeDetailsMap] = useState<Map<number, DisputeResponse>>(new Map());
 
@@ -339,6 +351,75 @@ const SellerDashboard = () => {
         }
       }
     });
+  };
+
+  // Handle open edit auction modal
+  const handleOpenEditAuction = (auction: AuctionSessionResponse) => {
+    setSelectedAuctionForEdit(auction);
+    setEditAuctionForm({
+      startTime: auction.startTime.slice(0, 16), // Convert to datetime-local format
+      endTime: auction.endTime.slice(0, 16),
+      startPrice: auction.startPrice,
+      reservePrice: 0, // Backend will use product's reservePrice if not changed
+      buyNowPrice: auction.buyNowPrice || 0
+    });
+    setShowEditAuctionModal(true);
+  };
+
+  // Handle update auction session
+  const handleUpdateAuction = async () => {
+    if (!selectedAuctionForEdit) return;
+
+    // Validation
+    if (!editAuctionForm.startTime || !editAuctionForm.endTime) {
+      toast.error('Vui lòng nhập đầy đủ thời gian bắt đầu và kết thúc');
+      return;
+    }
+
+    if (new Date(editAuctionForm.startTime) >= new Date(editAuctionForm.endTime)) {
+      toast.error('Thời gian kết thúc phải sau thời gian bắt đầu');
+      return;
+    }
+
+    if (editAuctionForm.startPrice <= 0) {
+      toast.error('Giá khởi điểm phải lớn hơn 0');
+      return;
+    }
+
+    try {
+      setIsUpdatingAuction(true);
+      const response = await auctionService.updateAuctionSessionByUser(selectedAuctionForEdit.id, {
+        startTime: new Date(editAuctionForm.startTime).toISOString(),
+        endTime: new Date(editAuctionForm.endTime).toISOString(),
+        startPrice: editAuctionForm.startPrice,
+        reservePrice: editAuctionForm.reservePrice,
+        buyNowPrice: editAuctionForm.buyNowPrice
+      });
+
+      toast.success(response.data.message || 'Cập nhật phiên đấu giá thành công!');
+
+      // If there's a payment URL (reserve price increased), redirect to payment
+      if (response.data.paymentUrl) {
+        toast.info('Bạn cần thanh toán phí giá sàn tăng thêm. Đang chuyển hướng...', {
+          duration: 3000
+        });
+        setTimeout(() => {
+          window.location.href = response.data.paymentUrl!;
+        }, 2000);
+      } else {
+        // Update the auction in the list
+        setAuctions(prevAuctions =>
+          prevAuctions.map(a => a.id === selectedAuctionForEdit.id ? response.data.sessionDetails : a)
+        );
+        setShowEditAuctionModal(false);
+        setSelectedAuctionForEdit(null);
+      }
+    } catch (error: any) {
+      console.error('Error updating auction:', error);
+      toast.error(error.response?.data?.message || 'Không thể cập nhật phiên đấu giá');
+    } finally {
+      setIsUpdatingAuction(false);
+    }
   };
 
   const handleSubmitTracking = async (trackingCode: string, carrier: string) => {
@@ -669,6 +750,16 @@ const SellerDashboard = () => {
                                     >
                                       Chi tiết
                                     </button>
+                                    {/* Edit button - only show for SCHEDULED or ACTIVE auctions without bids */}
+                                    {(auction.status === 'SCHEDULED' || auction.status === 'ACTIVE') && !auction.highestBidder && (
+                                      <button
+                                        onClick={() => handleOpenEditAuction(auction)}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+                                      >
+                                        <FileText className="w-4 h-4" />
+                                        Chỉnh sửa
+                                      </button>
+                                    )}
                                     {/* Cancel button - only show for SCHEDULED or ACTIVE auctions without bids */}
                                     {(auction.status === 'SCHEDULED' || auction.status === 'ACTIVE') && !auction.highestBidder && (
                                       <button
@@ -1390,7 +1481,136 @@ const SellerDashboard = () => {
             </div>
           </div>
         </div>
-      )}      {/* Custom Confirm Dialog */}
+      )}
+
+      {/* Edit Auction Modal */}
+      {showEditAuctionModal && selectedAuctionForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 my-8 animate-in fade-in-0 zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <FileText className="text-blue-600" size={28} />
+                Chỉnh sửa phiên đấu giá
+              </h2>
+              <button
+                onClick={() => setShowEditAuctionModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={24} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-gray-700 font-semibold">{selectedAuctionForEdit.product.name}</p>
+              <p className="text-xs text-gray-600 mt-1">Mã phiên: #{selectedAuctionForEdit.id}</p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              {/* Start Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thời gian bắt đầu <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={editAuctionForm.startTime}
+                  onChange={(e) => setEditAuctionForm({ ...editAuctionForm, startTime: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* End Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thời gian kết thúc <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={editAuctionForm.endTime}
+                  onChange={(e) => setEditAuctionForm({ ...editAuctionForm, endTime: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Start Price */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Giá khởi điểm (VNĐ) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={editAuctionForm.startPrice}
+                  onChange={(e) => setEditAuctionForm({ ...editAuctionForm, startPrice: Number(e.target.value) })}
+                  min="0"
+                  step="1000"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Reserve Price */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Giá sàn (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  value={editAuctionForm.reservePrice}
+                  onChange={(e) => setEditAuctionForm({ ...editAuctionForm, reservePrice: Number(e.target.value) })}
+                  min="0"
+                  step="1000"
+                  placeholder="Nhập giá sàn mới nếu giá sàn mới <= giá sàn cũ thì không phải thanh toán phí bổ sung"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ⚠️ Nếu tăng giá sàn, bạn sẽ cần thanh toán phí bổ sung
+                </p>
+              </div>
+
+              {/* Buy Now Price */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Giá mua ngay (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  value={editAuctionForm.buyNowPrice}
+                  onChange={(e) => setEditAuctionForm({ ...editAuctionForm, buyNowPrice: Number(e.target.value) })}
+                  min="0"
+                  step="1000"
+                  placeholder="Để 0 = không có giá mua ngay"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowEditAuctionModal(false)}
+                disabled={isUpdatingAuction}
+                className="flex-1 px-6 py-2.5 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleUpdateAuction}
+                disabled={isUpdatingAuction}
+                className="flex-1 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                {isUpdatingAuction ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Đang cập nhật...
+                  </>
+                ) : (
+                  'Cập nhật'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirm Dialog */}
       {showConfirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="bg-white rounded-2xl max-w-md w-full p-6 animate-in fade-in-0 zoom-in-95 duration-200">

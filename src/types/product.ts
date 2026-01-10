@@ -78,6 +78,17 @@ export interface CreateProductRequest {
     startPrice: number;
     categoryId: number;
     attributes: string;  // Backend expects String: "key1:value1,key2:value2"
+    imageIds: number[];
+}
+
+export interface ProductUpdateRequest {
+    name: string;
+    description: string;
+    startPrice: number;
+    categoryId: number;
+    attributes: string;
+    imageIdsToAdd?: number[];
+    imageIdsToRemove?: number[];
     imageIds?: number[] | null;
 }
 

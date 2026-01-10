@@ -75,6 +75,14 @@ export interface CreateAuctionSessionResponse {
     sessionDetails: AuctionSessionResponse;
 }
 
+export interface UpdateAuctionSessionRequest {
+    startTime: string; // ISO 8601 format
+    endTime: string;
+    startPrice: number;
+    reservePrice: number;
+    buyNowPrice: number;
+}
+
 export interface PaymentResponse {
     code: string; // "00": Success, others: Failed
     message: string;

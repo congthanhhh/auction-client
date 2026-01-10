@@ -1,6 +1,6 @@
 
 import axiosClient from "@/lib/axios";
-import type { CreateAuctionSessionRequest, CreateAuctionSessionResponse, AuctionSessionResponse, AuctionStatus } from "@/types/auction";
+import type { CreateAuctionSessionRequest, CreateAuctionSessionResponse, AuctionSessionResponse, AuctionStatus, UpdateAuctionSessionRequest } from "@/types/auction";
 import type { PageResponse } from "@/types/common";
 
 export const auctionService = {
@@ -45,6 +45,11 @@ export const auctionService = {
     // PUT update auction session
     updateAuctionSession(sessionId: number, data: Partial<CreateAuctionSessionRequest>) {
         return axiosClient.put<CreateAuctionSessionResponse>(`/auction-sessions/${sessionId}`, data);
+    },
+
+    // PUT update auction session by user (seller) - no bids yet
+    updateAuctionSessionByUser(sessionId: number, data: UpdateAuctionSessionRequest) {
+        return axiosClient.put<CreateAuctionSessionResponse>(`/auction-sessions/update${sessionId}`, data);
     },
 
     // DELETE auction session

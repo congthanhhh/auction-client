@@ -1,12 +1,17 @@
 // src/services/productService.ts
 
 import axiosClient from "@/lib/axios";
-import type { CreateProductRequest, CreateProductResponse, Product, ProductListResponse, ProductSearchRequest, ProductResponse } from "@/types/product";
+import type { CreateProductRequest, CreateProductResponse, Product, ProductListResponse, ProductSearchRequest, ProductResponse, ProductUpdateRequest } from "@/types/product";
 import type { PageResponse } from "@/types/common";
 
 export const productService = {
     // GET single product
     getProduct(productId: number) {
+        return axiosClient.get<ProductResponse>(`/products/${productId}`);
+    },
+
+    // GET product by ID
+    getProductById(productId: number) {
         return axiosClient.get<ProductResponse>(`/products/${productId}`);
     },
 
@@ -26,8 +31,8 @@ export const productService = {
     },
 
     // PUT update product
-    updateProduct(productId: number, data: Partial<CreateProductRequest>) {
-        return axiosClient.put<CreateProductResponse>(`/products/${productId}`, data);
+    updateProduct(productId: number, data: ProductUpdateRequest) {
+        return axiosClient.put<ProductResponse>(`/products/${productId}`, data);
     },
 
     // PATCH delete product (soft delete - set isActive=false)
@@ -61,5 +66,10 @@ export const productService = {
         return axiosClient.patch<string>(`/products/admin/${productId}/verify`, null, {
             params: { isApproved }
         });
+    },
+
+    // ADMIN: Update product by admin
+    updateProductByAdmin(productId: number, data: ProductUpdateRequest) {
+        return axiosClient.put<ProductResponse>(`/products/admin/update/${productId}`, data);
     }
 };
