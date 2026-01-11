@@ -6,7 +6,8 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 // 1. Khởi tạo instance
 const axiosClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1',
+    // baseURL: 'http://localhost:8080/api/v1',
+    baseURL: 'http://70.153.80.120:8080/api/v1',
     headers: {
         'Content-Type': 'application/json',
     },
