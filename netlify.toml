@@ -2,15 +2,15 @@
 command = "npm run build"
 publish = "dist"
 
-# SPA redirect: mọi route trả về index.html
-[[redirects]]
-from = "/*"
-to = "/index.html"
-status = 200
-
-# API proxy: tránh mixed-content (HTTPS site gọi HTTP API)
+# 1) API proxy — phải đặt TRƯỚC catch-all
 [[redirects]]
 from = "/api/v1/*"
 to = "http://70.153.80.120:8080/api/v1/:splat"
 status = 200
 force = true
+
+# 2) SPA redirect cho React Router
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
