@@ -141,7 +141,7 @@ const AdminDisputes = () => {
             REFUND_TO_BUYER: { bg: "bg-green-100", text: "text-green-800", label: "Phán quyết người mua thắng", icon: CheckCircle },
             RELEASE_TO_SELLER: { bg: "bg-blue-100", text: "text-blue-800", label: "Phán quyết người bán thắng", icon: XCircle },
         };
-        const badge = badges[decision];
+        const badge = badges[decision] || { bg: "bg-gray-100", text: "text-gray-800", label: decision, icon: AlertTriangle };
         const Icon = badge.icon;
         return (
             <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}>

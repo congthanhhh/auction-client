@@ -76,8 +76,8 @@ const Home = () => {
 
   // Fetch auctions khi component mount
   useEffect(() => {
-    fetchActiveAuctions(1, 6);
-    fetchScheduledAuctions(1, 6);
+    fetchActiveAuctions(1, 12);
+    fetchScheduledAuctions(1, 12);
     fetchPopularAuctions();
   }, [fetchActiveAuctions, fetchScheduledAuctions, fetchPopularAuctions]);
 
@@ -270,7 +270,7 @@ const Home = () => {
               SẢN PHẨM <span className="text-yellow-600">ĐANG ĐẤU GIÁ</span>
             </h2>
             <button
-              onClick={() => navigate('/all-auctions')}
+              onClick={() => navigate('/all-auctions?type=active')}
               className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium"
             >
               Xem tất cả
@@ -352,7 +352,7 @@ const Home = () => {
               SẢN PHẨM <span className="text-amber-600">SẮP ĐẤU GIÁ</span>
             </h2>
             <button
-              onClick={() => navigate('/all-auctions')}
+              onClick={() => navigate('/all-auctions?type=scheduled')}
               className="text-blue-600 hover:text-blue-700 hover:underline text-sm sm:text-base lg:text-lg self-start sm:self-auto transition-colors font-medium"
             >
               Xem tất cả

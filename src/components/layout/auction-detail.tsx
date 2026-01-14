@@ -278,9 +278,12 @@ const AuctionDetail = () => {
                   </label>
                   <div className="relative">
                     <input
-                      type="number"
-                      value={bidAmount || ''}
-                      onChange={(e) => setBidAmount(Number(e.target.value))}
+                      type="text"
+                      value={bidAmount ? formatCurrency(bidAmount) : ''}
+                      onChange={(e) => {
+                        const rawValue = e.target.value.replace(/\D/g, '');
+                        setBidAmount(rawValue ? Number(rawValue) : 0);
+                      }}
                       placeholder="0"
                       className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg font-semibold"
                     />
@@ -414,7 +417,7 @@ const AuctionDetail = () => {
                             <span className="text-gray-900 font-bold">{bidHistoryTotalElements}</span>
                             {highestBidder && highestBidder !== 'Chưa có' && (
                               <p className="text-xs text-gray-500 mt-1">
-                                Cao nhất: {highestBidder.charAt(0)}****{highestBidder.slice(-1)}
+                                Cao nhất: {highestBidder}
                               </p>
                             )}
                           </div>
@@ -664,7 +667,7 @@ const AuctionDetail = () => {
                                   <td className="px-4 py-3 text-sm">
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium">
-                                        {bid.user.username.charAt(0)}****{bid.user.username.slice(-1)}
+                                        {bid.user.username}
                                       </span>
                                       {isMe && (
                                         <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Bạn</span>

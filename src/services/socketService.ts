@@ -2,8 +2,8 @@
 import { io, type Socket } from 'socket.io-client';
 import { useAuthStore } from '@/stores/useAuthStore';
 
-// const SOCKET_URL = 'http://localhost:9092';
-const SOCKET_URL = 'http://70.153.80.120:9092';
+const SOCKET_URL = 'http://localhost:9092';
+// const SOCKET_URL = 'http://70.153.80.120:9092';
 
 
 class SocketService {

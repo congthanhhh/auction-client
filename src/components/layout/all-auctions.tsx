@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Grid, List, Clock, Search } from 'lucide-react';
 import PageLayout from './page-layout';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Pagination from '../ui/pagination';
 import { useAuctionListStore } from '@/stores/useAuctionListStore';
 
 const AllAuctionsPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  const typeParam = searchParams.get('type');
+  const [auctionType, setAuctionType] = useState<'active' | 'scheduled'>(
+    typeParam === 'scheduled' ? 'scheduled' : 'active'
+  );
 
   // Sử dụng store để fetch auctions
   const {
@@ -18,12 +23,21 @@ const AllAuctionsPage = () => {
     activeCurrentPage,
     activeTotalPages,
     fetchActiveAuctions,
+    scheduledAuctions,
+    scheduledLoading,
+    scheduledCurrentPage,
+    scheduledTotalPages,
+    fetchScheduledAuctions,
   } = useAuctionListStore();
 
   // Fetch auctions khi component mount hoặc page thay đổi
   useEffect(() => {
-    fetchActiveAuctions(activeCurrentPage, 9); // 9 items per page
-  }, [activeCurrentPage, fetchActiveAuctions]);
+    if (auctionType === 'active') {
+      fetchActiveAuctions(activeCurrentPage, 9);
+    } else {
+      fetchScheduledAuctions(scheduledCurrentPage, 9);
+    }
+  }, [auctionType, activeCurrentPage, scheduledCurrentPage, fetchActiveAuctions, fetchScheduledAuctions]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -48,8 +62,29 @@ const AllAuctionsPage = () => {
     return `${minutes} phút`;
   };
 
+  const getTimeUntilStart = (startTime: string) => {
+    const start = new Date(startTime).getTime();
+    const now = new Date().getTime();
+    const diff = start - now;
+
+    if (diff <= 0) return 'Đã bắt đầu';
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) return `Còn ${days} ngày`;
+    if (hours > 0) return `Còn ${hours} giờ`;
+    return `Còn ${minutes} phút`;
+  };
+
   // Filter and sort auctions từ API data
-  let filteredAuctions = [...activeAuctions];
+  const currentAuctions = auctionType === 'active' ? activeAuctions : scheduledAuctions;
+  const isLoading = auctionType === 'active' ? activeLoading : scheduledLoading;
+  const currentPage = auctionType === 'active' ? activeCurrentPage : scheduledCurrentPage;
+  const totalPages = auctionType === 'active' ? activeTotalPages : scheduledTotalPages;
+
+  let filteredAuctions = [...currentAuctions];
 
   // Client-side search filter (nếu cần)
   if (searchQuery) {
@@ -69,7 +104,11 @@ const AllAuctionsPage = () => {
   });
 
   const handlePageChange = (page: number) => {
-    fetchActiveAuctions(page, 9);
+    if (auctionType === 'active') {
+      fetchActiveAuctions(page, 9);
+    } else {
+      fetchScheduledAuctions(page, 9);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -93,6 +132,30 @@ const AllAuctionsPage = () => {
               🔥 Tất Cả Phiên Đấu Giá
             </h1>
             <p className="text-gray-600">Khám phá sản phẩm đang được đấu giá</p>
+          </div>
+
+          {/* Auction Type Tabs */}
+          <div className="mb-6">
+            <div className="bg-white rounded-2xl shadow-lg p-2 inline-flex gap-2">
+              <button
+                onClick={() => setAuctionType('active')}
+                className={`px-6 py-3 rounded-xl font-semibold transition-all ${auctionType === 'active'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+              >
+                🔥 Đang đấu giá
+              </button>
+              <button
+                onClick={() => setAuctionType('scheduled')}
+                className={`px-6 py-3 rounded-xl font-semibold transition-all ${auctionType === 'scheduled'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+              >
+                ⏰ Sắp đấu giá
+              </button>
+            </div>
           </div>
 
           {/* Search & Filter Bar */}
@@ -156,7 +219,7 @@ const AllAuctionsPage = () => {
               {/* Grid View */}
               {viewMode === 'grid' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {activeLoading ? (
+                  {isLoading ? (
                     <div className="col-span-full text-center py-12">
                       <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
                       <p className="text-gray-600 text-lg">Đang tải phiên đấu giá...</p>
@@ -181,7 +244,10 @@ const AllAuctionsPage = () => {
                           />
                           <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            {getTimeRemaining(auction.endTime)}
+                            {auctionType === 'active'
+                              ? getTimeRemaining(auction.endTime)
+                              : getTimeUntilStart(auction.startTime)
+                            }
                           </div>
                         </div>
 
@@ -215,9 +281,12 @@ const AllAuctionsPage = () => {
                                 e.stopPropagation();
                                 navigate(`/auction/${auction.id}`);
                               }}
-                              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
+                              className={`flex-1 py-2 rounded-lg font-semibold transition-all ${auctionType === 'active'
+                                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+                                : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600'
+                                }`}
                             >
-                              Đặt giá
+                              {auctionType === 'active' ? 'Đặt giá' : 'Xem chi tiết'}
                             </button>
                           </div>
                         </div>
@@ -230,7 +299,7 @@ const AllAuctionsPage = () => {
               {/* List View */}
               {viewMode === 'list' && (
                 <div className="space-y-4">
-                  {activeLoading ? (
+                  {isLoading ? (
                     <div className="text-center py-12">
                       <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
                       <p className="text-gray-600 text-lg">Đang tải phiên đấu giá...</p>
@@ -259,8 +328,15 @@ const AllAuctionsPage = () => {
                               <p className="text-xl font-bold text-purple-600">{formatCurrency(auction.currentPrice)}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Thời gian còn lại</p>
-                              <p className="text-lg font-bold text-orange-600">{getTimeRemaining(auction.endTime)}</p>
+                              <p className="text-xs text-gray-500">
+                                {auctionType === 'active' ? 'Thời gian còn lại' : 'Bắt đầu sau'}
+                              </p>
+                              <p className="text-lg font-bold text-orange-600">
+                                {auctionType === 'active'
+                                  ? getTimeRemaining(auction.endTime)
+                                  : getTimeUntilStart(auction.startTime)
+                                }
+                              </p>
                             </div>
                             {auction.highestBidder && (
                               <div>
@@ -270,8 +346,11 @@ const AllAuctionsPage = () => {
                             )}
                           </div>
                         </div>
-                        <button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all self-center">
-                          Đặt giá
+                        <button className={`px-6 py-3 rounded-lg font-semibold transition-all self-center ${auctionType === 'active'
+                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+                          : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600'
+                          }`}>
+                          {auctionType === 'active' ? 'Đặt giá' : 'Xem chi tiết'}
                         </button>
                       </div>
                     ))
@@ -280,10 +359,10 @@ const AllAuctionsPage = () => {
               )}
 
               {/* Pagination */}
-              {!activeLoading && filteredAuctions.length > 0 && (
+              {!isLoading && filteredAuctions.length > 0 && (
                 <Pagination
-                  currentPage={activeCurrentPage}
-                  totalPages={activeTotalPages}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
                   onPageChange={handlePageChange}
                 />
               )}
